@@ -20,7 +20,7 @@ class Login(QWidget):
     def __init__(self):
         super().__init__()
         
-        ui_file_path = "/home/rapa/team_project/pipeline/login.ui"
+        ui_file_path = "/home/rapa/hyoeun_git/pipeline/login.ui"
         ui_file = QFile(ui_file_path)
         loader = QUiLoader()
         self.ui = loader.load(ui_file, self)
