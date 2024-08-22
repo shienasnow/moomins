@@ -19,8 +19,9 @@ class Login(QWidget):
 
     def __init__(self):
         super().__init__()
-        
-        ui_file_path = "/home/rapa/hyoeun_git/pipeline/login.ui"
+
+        my_path = os.path.dirname(__file__)
+        ui_file_path = my_path + "/login.ui"
         ui_file = QFile(ui_file_path)
         loader = QUiLoader()
         self.ui = loader.load(ui_file, self)
@@ -186,9 +187,9 @@ class Login(QWidget):
 
         if user_dept == "Asset":
             print(f"에셋 작업자입니다. {user_name}님 에셋 로더로 연결합니다.")
-            from loader import asset_loader # 파일 이름
+            from loader import asset_loader_fin # 파일 이름
             global asset_window # login.py(메인 파일)에서 QApplication를 실행할 때 asset_window를 포함하도록
-            asset_window = asset_loader.AssetLoader(user_id) # 클래스 이름
+            asset_window = asset_loader_fin.AssetLoader(user_id) # 클래스 이름
             asset_window.show()
             win.close()
 
