@@ -22,7 +22,6 @@ class AssetLoader(QWidget):
 
     def __init__(self, user_id):
         super().__init__()
-        # print("에셋 로더 연결")
 
         self.installEventFilter(self)
         self.connect_sg()
