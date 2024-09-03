@@ -23,4 +23,4 @@ pull request 에서 내가 merge할 브랜치를 선택한다
 현재 main의 변경된 사항이 나에게 업데이트가 되지 않았을 수도 있으므로
 push를 한 다음에는 꼭 git pull origin main을 수행하도록 한다
 
-testtts
+testttssss
