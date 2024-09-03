@@ -6,23 +6,36 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>959</width>
+    <width>815</width>
     <height>663</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(85, 87, 83);</string>
+  </property>
   <widget class="QWidget" name="gridLayoutWidget">
    <property name="geometry">
     <rect>
      <x>20</x>
      <y>40</y>
-     <width>921</width>
+     <width>781</width>
      <height>611</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="1">
+     <widget class="QLabel" name="label_2">
+      <property name="styleSheet">
+       <string notr="true">color: rgb(255, 255, 255);</string>
+      </property>
+      <property name="text">
+       <string>task:</string>
+      </property>
+     </widget>
+    </item>
     <item row="2" column="1">
      <widget class="QTableWidget" name="tableWidget">
       <property name="maximumSize">
@@ -30,6 +43,11 @@
         <width>450</width>
         <height>16777215</height>
        </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(46, 52, 54);
+selection-background-color: rgb(114, 159, 207);
+color: rgb(255, 255, 255);</string>
       </property>
       <attribute name="horizontalHeaderVisible">
        <bool>false</bool>
@@ -41,6 +59,9 @@
     </item>
     <item row="0" column="2">
      <widget class="QLabel" name="label_3">
+      <property name="styleSheet">
+       <string notr="true">color: rgb(255, 255, 255);</string>
+      </property>
       <property name="text">
        <string>file:</string>
       </property>
@@ -48,15 +69,25 @@
     </item>
     <item row="0" column="0">
      <widget class="QLabel" name="label">
+      <property name="styleSheet">
+       <string notr="true">color: rgb(255, 255, 255);</string>
+      </property>
       <property name="text">
        <string>project:</string>
       </property>
      </widget>
     </item>
-    <item row="0" column="1">
-     <widget class="QLabel" name="label_2">
-      <property name="text">
-       <string>task:</string>
+    <item row="2" column="2">
+     <widget class="QListWidget" name="listWidget">
+      <property name="maximumSize">
+       <size>
+        <width>250</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: rgb(255, 255, 255);
+background-color: rgb(46, 52, 54);</string>
       </property>
      </widget>
     </item>
@@ -68,6 +99,10 @@
         <height>16777215</height>
        </size>
       </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(46, 52, 54);
+color: rgb(255, 255, 255);</string>
+      </property>
       <attribute name="headerVisible">
        <bool>false</bool>
       </attribute>
@@ -78,17 +113,38 @@
       </column>
      </widget>
     </item>
-    <item row="2" column="2">
-     <widget class="QListWidget" name="listWidget">
-      <property name="maximumSize">
-       <size>
-        <width>250</width>
-        <height>16777215</height>
-       </size>
-      </property>
-     </widget>
-    </item>
    </layout>
+  </widget>
+  <widget class="QPushButton" name="pushButton">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>10</y>
+     <width>41</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>15</pointsize>
+     <weight>50</weight>
+     <bold>false</bold>
+     <stylestrategy>PreferAntialias</stylestrategy>
+    </font>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: rgb(255, 255, 255);
+background-color: rgb(136, 138, 133);</string>
+   </property>
+   <property name="text">
+    <string> ⟲ </string>
+   </property>
   </widget>
  </widget>
  <resources/>

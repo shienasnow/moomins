@@ -4,14 +4,18 @@ import os
 from PySide6.QtWidgets import QApplication, QWidget, QMessageBox
 from PySide6.QtWidgets import QDialog, QLabel, QVBoxLayout, QPushButton, QAbstractButton
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtCore import QFile, QTimer, QEventLoop, Qt
+from PySide6.QtCore import QFile, QTimer
+from PySide6.QtGui import QPixmap
 from shotgun_api3 import shotgun
 
-sys.path.append("/home/rapa/python-api")
+sys.path.append("/home/rapa/git/pipeline/shotgrid")
+from shotgun_api import ShotgunApi
 
-URL = "https://4thacademy.shotgrid.autodesk.com"
-SCRIPT_NAME = "moomins_key"
-API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
+# sys.path.append("/home/rapa/python-api")
+
+# URL = "https://4thacademy.shotgrid.autodesk.com"
+# SCRIPT_NAME = "moomins_key"
+# API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
 
 
 
@@ -20,16 +24,24 @@ class Login(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.sg_cls = ShotgunApi()
+
+        self.make_ui()
+        self.ui.pushButton.clicked.connect(self.get_login_info) # 버튼으로 실행
+        self.ui.lineEdit_pw.returnPressed.connect(self.get_login_info) # 엔터로 실행
+        self.count = 0 # 5번 틀리면 강제 종료되고, 시간 지나서 실행 가능하도록
+
+    def make_ui(self):
         my_path = os.path.dirname(__file__)
         ui_file_path = my_path + "/login.ui"
         ui_file = QFile(ui_file_path)
         loader = QUiLoader()
         self.ui = loader.load(ui_file, self)
 
-        self.ui.pushButton.clicked.connect(self.get_login_info) # 버튼으로 실행
-        self.ui.lineEdit_pw.returnPressed.connect(self.get_login_info) # 엔터로 실행
-        self.count = 0 # 5번 틀리면 강제 종료되고, 시간 지나서 실행 가능하도록
-
+        img_path = my_path + "/sourceimages/moomins.png"
+        pixmap = QPixmap(img_path)
+        scaled_pixmap = pixmap.scaled(395, 161)
+        self.ui.label_img.setPixmap(scaled_pixmap)
 
     def get_login_info(self): # 사용자가 입력한 로그인 정보 가져와서 get_shotgrid_email로 보내기
         input_id = self.ui.lineEdit_id.text()
@@ -65,8 +77,10 @@ class Login(QWidget):
 
     def get_shotgrid_email(self, input_id, input_pw): # shotgrid 정보랑 입력한 정보가 같을 때 get_dept
         # 패스워드로 id에 접근하는 방식 (오토데스크 토큰을 발급&등록, Legacy Login PW 생성 필요)
-        a = shotgun.Shotgun(URL, input_id, input_pw) # 사용자의 권한을 그대로 반영하여 API 호출
-        user = a.authenticate_human_user(input_id, input_pw) # 사용자의 자격 증명을 확인해서 유효한 사용자이면 사용자 정보 반환
+        # a = shotgun.Shotgun(URL, input_id, input_pw) # 사용자의 권한을 그대로 반영하여 API 호출
+        # user = a.authenticate_human_user(input_id, input_pw) # 사용자의 자격 증명을 확인해서 유효한 사용자이면 사용자 정보 반환
+        user = self.sg_cls.get_shotgrid_email(input_id, input_pw)
+        
         if not user: # user가 None일 경우
             # QMessageBox.about(self, "경고", "등록되지 않은 사용자입니다!\n올바른 정보를 입력해주세요")
             self.ui.lineEdit_id.clear()
@@ -88,6 +102,8 @@ class Login(QWidget):
             print("정보 일치")
             self.ui.label_timeout.setText("로그인 완료! Loader 접속 중입니다!")
             self.get_dept(shotgrid_id)
+
+
 
     def timeout_popup(self):
         # Dialog 팝업 창 생성
@@ -162,20 +178,23 @@ class Login(QWidget):
         # self.ui.label_timeout.setText("로그인 접근 제한이 해제되었습니다.\n로그인을 다시 시도할 수 있습니다.")
 
 
-    def connect_sg(self):
-        sg = shotgun.Shotgun(URL,
-                            SCRIPT_NAME,
-                            API_KEY)
-        return sg
+
+    # def connect_sg(self):
+    #     sg = shotgun.Shotgun(URL,
+    #                         SCRIPT_NAME,
+    #                         API_KEY)
+    #     return sg
 
     def get_dept(self, shotgrid_id): # 사용자 이름, Department 정보 가져오기
         # print(shotgrid_id) # 작업자의 id
-        sg = self.connect_sg()
+        # sg = self.connect_sg()
 
-        filter_dept = [["id", "is", shotgrid_id]]
-        field_dept = ["name", "department"]
-        datas = sg.find_one("HumanUser", filters=filter_dept, fields=field_dept) # "~"에서 filters 조건에 맞는 fields를 찾는다
-        print(datas) # {'type': 'HumanUser', 'id': 121, 'name': 'hyoeun seol', 'department': {'id': 41, 'name': 'Shot', 'type': 'Department'}}
+        # filter_dept = [["id", "is", shotgrid_id]]
+        # field_dept = ["name", "department"]
+        # datas = sg.find_one("HumanUser", filters=filter_dept, fields=field_dept) # "~"에서 filters 조건에 맞는 fields를 찾는다
+        # print(datas) # {'type': 'HumanUser', 'id': 121, 'name': 'hyoeun seol', 'department': {'id': 41, 'name': 'Shot', 'type': 'Department'}}
+
+        datas = self.sg_cls.get_dept(shotgrid_id)
 
         user_name = datas["name"]  # hyoeun seol
         user_dept = datas["department"]["name"]  # Shot
@@ -187,9 +206,9 @@ class Login(QWidget):
 
         if user_dept == "Asset":
             print(f"에셋 작업자입니다. {user_name}님 에셋 로더로 연결합니다.")
-            from loader import asset_loader_fin # 파일 이름
+            from loader import asset_loader # 파일 이름
             global asset_window # login.py(메인 파일)에서 QApplication를 실행할 때 asset_window를 포함하도록
-            asset_window = asset_loader_fin.AssetLoader(user_id) # 클래스 이름
+            asset_window = asset_loader.AssetLoader(user_id) # 클래스 이름
             asset_window.show()
             win.close()
 
@@ -200,9 +219,12 @@ class Login(QWidget):
             shot_window = shot_loader.ShotLoader(user_id)
             shot_window.show()
             win.close()
+        
+        os.environ["USER_ID"] = user_id # 대문자는 약속
 
 
-app = QApplication()
-win = Login()
-win.show()
-app.exec()
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    win = Login()
+    win.show()
+    app.exec()

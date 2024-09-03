@@ -6,36 +6,27 @@ import re
 import webbrowser
 import subprocess
 from pprint import pprint
-# from shotgun_api3 import Shotgun
+from shotgun_api3 import Shotgun
 from PySide6.QtWidgets import QApplication, QWidget, QTreeWidgetItem
 from PySide6.QtWidgets import QLabel, QMenu, QMessageBox
-from PySide6.QtWidgets import QGridLayout
+from PySide6.QtWidgets import QGridLayout, QTableWidgetItem
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtCore import QFile, Qt
 from PySide6.QtGui import QPixmap, QAction
 
-sys.path.append("/home/rapa/pipeline_0825/pipeline/shotgrid")
-from shotgun_api import ShotgunApi
-
-
 class ShotLoader (QWidget): 
 
-    def __init__(self, user_id):
+    def __init__(self):
         super().__init__()
 
-        self.sg_cls = ShotgunApi()
-        # print (user_id)
-        self.sg_cls.get_datas_by_id(user_id)
-
         self.make_ui()
-
-        # self.connect_id()
-        self.get_task_data(user_id)
+        
+        self.connect_sg()
+        self.get_task_data()
         self.set_treewidget()
         self.make_tablewidget()
 
         self.events()
-    
         
 
     def make_ui(self): # ui 만드는 메서드 
@@ -60,13 +51,50 @@ class ShotLoader (QWidget):
         self.ui.listWidget.itemDoubleClicked.connect(self.double_clicked_item) # 리스트위젯 더블클릭 용
         self.ui.pushButton.clicked.connect(self.refresh) # refresh 용 버튼
      
-    def get_task_data(self, user_id): # 할당된 데이터 정보 가져와서 딕셔너리로 정리
+
+    # user data 정리
+    def connect_sg(self): # 샷그리드 연결 메서드
+        """
+        샷그리드 연결
+        """
+
+        URL = "https://4thacademy.shotgrid.autodesk.com/"
+        SCRIPT_NAME = "moomins_key"
+        API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
+
+        sg = Shotgun(URL, SCRIPT_NAME, API_KEY)
+
+        return sg
+    
+    def get_user_data (self, user_id): # 유저 데이터 갖고오기
+        """
+        shotgun 에서 user data 가져오기
+        """
+
+        sg = self.connect_sg()
+
+        try:
+            user_id = os.environ["USER_ID"]
+        except:
+            user_id = 94
+
+        filters = [["id", "is", user_id]]
+        fields = ["projects", "name"]
+        user_datas = sg.find_one("HumanUser", filters=filters, fields=fields)
+        user_name = user_datas["name"]
+        
+        return user_id, user_name 
+
+    def get_task_data(self): # 할당된 데이터 정보 가져와서 딕셔너리로 정리
         """
         user data dict으로 재정리
         """
+        sg = self.connect_sg()
+        user_id, user_name = self.get_user_data()
 
-        datas_list = self.sg_cls.get_shot_task_data(user_id)
-        pprint (datas_list)
+        filters = [["task_assignees", "is", {'id': user_id, 'name': user_name, 'type': 'HumanUser'}]]
+        fields = ["projects", "entity", "task_assignees", "step", "sg_status_list", "start_date", "due_date", "project"]
+        datas_list = sg.find("Task", filters=filters, fields=fields) # 리스트에 싸여진 딕셔너리들 데이터
 
         # data 정리
         self.projects_data_dict = {}
@@ -105,7 +133,9 @@ class ShotLoader (QWidget):
             self.projects_data_dict[project_name][seq]["status"] = status
             self.projects_data_dict[project_name][seq]["version"] = version
             
-        # pprint (self.projects_data_dict)
+
+
+        pprint (self.projects_data_dict)
 
         # 'Moomins': {'AFT_0010': {'due_date': '2024-10-02',
         #                         'start_date': '2024-09-30',
@@ -621,9 +651,9 @@ class ShotLoader (QWidget):
         self.set_listwidget()
 
 
-    def refresh(self, user_id): # data 를 다시 가져오는 메서드 ( 새로고침 )
+    def refresh(self): # data 를 다시 가져오는 메서드 ( 새로고침 )
         self.clear_ui()
-        self.reload_data(user_id)
+        self.reload_data()
 
     def clear_ui(self): # refresh 때 ui 비우는 메서드
         self.tree.clear()
@@ -631,8 +661,8 @@ class ShotLoader (QWidget):
         self.table.setRowCount(0)
         self.ui.listWidget.clear()
 
-    def reload_data(self, user_id): # refresh 때 다시 데이터를 가져오는 메서드
-        self.get_task_data(user_id)
+    def reload_data(self): # refresh 때 다시 데이터를 가져오는 메서드
+        self.get_task_data()
         self.set_treewidget()
 
         
