@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1521</width>
+    <width>1155</width>
     <height>700</height>
    </rect>
   </property>
@@ -33,32 +33,34 @@
     <rect>
      <x>370</x>
      <y>60</y>
-     <width>831</width>
+     <width>451</width>
      <height>541</height>
     </rect>
    </property>
+   <property name="wordWrap">
+    <bool>false</bool>
+   </property>
+   <property name="cornerButtonEnabled">
+    <bool>false</bool>
+   </property>
+   <attribute name="horizontalHeaderVisible">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="horizontalHeaderHighlightSections">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderVisible">
+    <bool>false</bool>
+   </attribute>
   </widget>
   <widget class="QListWidget" name="listWidget">
    <property name="geometry">
     <rect>
-     <x>1240</x>
+     <x>860</x>
      <y>60</y>
      <width>256</width>
      <height>541</height>
     </rect>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="checkBox">
-   <property name="geometry">
-    <rect>
-     <x>390</x>
-     <y>30</y>
-     <width>181</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>enable</string>
    </property>
   </widget>
  </widget>

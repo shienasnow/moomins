@@ -4,7 +4,8 @@ import os
 from PySide6.QtWidgets import QApplication, QWidget, QMessageBox
 from PySide6.QtWidgets import QDialog, QLabel, QVBoxLayout, QPushButton, QAbstractButton
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtCore import QFile, QTimer, QEventLoop, Qt
+from PySide6.QtCore import QFile, QTimer
+from PySide6.QtGui import QPixmap
 from shotgun_api3 import shotgun
 
 sys.path.append("/home/rapa/python-api")
@@ -20,16 +21,22 @@ class Login(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.make_ui()
+        self.ui.pushButton.clicked.connect(self.get_login_info) # 버튼으로 실행
+        self.ui.lineEdit_pw.returnPressed.connect(self.get_login_info) # 엔터로 실행
+        self.count = 0 # 5번 틀리면 강제 종료되고, 시간 지나서 실행 가능하도록
+
+    def make_ui(self):
         my_path = os.path.dirname(__file__)
         ui_file_path = my_path + "/login.ui"
         ui_file = QFile(ui_file_path)
         loader = QUiLoader()
         self.ui = loader.load(ui_file, self)
 
-        self.ui.pushButton.clicked.connect(self.get_login_info) # 버튼으로 실행
-        self.ui.lineEdit_pw.returnPressed.connect(self.get_login_info) # 엔터로 실행
-        self.count = 0 # 5번 틀리면 강제 종료되고, 시간 지나서 실행 가능하도록
-
+        img_path = my_path + "/sourceimages/moomins.png"
+        pixmap = QPixmap(img_path)
+        scaled_pixmap = pixmap.scaled(395, 161)
+        self.ui.label_img.setPixmap(scaled_pixmap)
 
     def get_login_info(self): # 사용자가 입력한 로그인 정보 가져와서 get_shotgrid_email로 보내기
         input_id = self.ui.lineEdit_id.text()
@@ -88,6 +95,8 @@ class Login(QWidget):
             print("정보 일치")
             self.ui.label_timeout.setText("로그인 완료! Loader 접속 중입니다!")
             self.get_dept(shotgrid_id)
+
+
 
     def timeout_popup(self):
         # Dialog 팝업 창 생성
@@ -162,6 +171,7 @@ class Login(QWidget):
         # self.ui.label_timeout.setText("로그인 접근 제한이 해제되었습니다.\n로그인을 다시 시도할 수 있습니다.")
 
 
+
     def connect_sg(self):
         sg = shotgun.Shotgun(URL,
                             SCRIPT_NAME,
@@ -187,9 +197,9 @@ class Login(QWidget):
 
         if user_dept == "Asset":
             print(f"에셋 작업자입니다. {user_name}님 에셋 로더로 연결합니다.")
-            from loader import asset_loader_fin # 파일 이름
+            from loader import asset_loader # 파일 이름
             global asset_window # login.py(메인 파일)에서 QApplication를 실행할 때 asset_window를 포함하도록
-            asset_window = asset_loader_fin.AssetLoader(user_id) # 클래스 이름
+            asset_window = asset_loader.AssetLoader(user_id) # 클래스 이름
             asset_window.show()
             win.close()
 
@@ -200,9 +210,12 @@ class Login(QWidget):
             shot_window = shot_loader.ShotLoader(user_id)
             shot_window.show()
             win.close()
+        
+        os.environ["USER_ID"] = user_id # 대문자는 약속
 
 
-app = QApplication()
-win = Login()
-win.show()
-app.exec()
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    win = Login()
+    win.show()
+    app.exec()
