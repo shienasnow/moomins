@@ -17,7 +17,7 @@ from PySide6.QtCore import Qt,QUrl
 from PySide6.QtGui import QDesktopServices,QPixmap
 from datetime import datetime
 from pprint import pprint
-print("GG")
+
 sys.path.append("/home/rapa/pipeline_0825/pipeline/shotgrid")
 from shotgun_api import ShotgunApi
 
