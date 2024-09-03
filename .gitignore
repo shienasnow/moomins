@@ -1,0 +1,30 @@
+# macOS에서 생성되는 .DS_Store 파일 무시
+.DS_Store
+
+# macOS에서 생성되는 썸네일 파일
+.AppleDouble
+.LSOverride
+
+# macOS에서 사용되는 아이콘 파일
+Icon\r
+
+# macOS에서 생성되는 파인더 속성 파일
+._*
+.Spotlight-V100
+.Trashes
+
+# maya에서 사용자에 종속되는 설정값들이 저장되는 폴더
+<<<<<<< HEAD
+**/toolkit/config/core/maya/2023/prefs
+=======
+**/maya/2023/prefs
+>>>>>>> 76c90c476b84d02387f0dddb00fa50e566dbf244
+
+**/maya/mayaLog
+
+# Python bytecode files
+*.pyc
+**/__pycache__/
+
+# show 폴더는 업로드하지 않습니다
+**/show/
