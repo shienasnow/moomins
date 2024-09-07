@@ -1,0 +1,10 @@
+2024-08-24 16:27:05: LOG: Import: /home/rapa/pub/Moomins/asset/character/joker/rig/pub/scenes/v001/source/Joker (merge).fbx
+2024-08-24 16:27:06: LOG: [WARNING] BindPose - Incomplete BindPose [nodes parents] - The following parent and/or ancestor node(s) is/are not part of the BindPose definition. Joker
+2024-08-24 16:27:06: LOG: [WARNING] Skin Definition - The imported scene has no initial binding position (Bind Pose) for the skin. 
+	The plug-in will compute one automatically. However, running the 'Go To Bind Pose' command 
+	may create unexpected results.   
+2024-08-24 16:32:48: LOG: Import: /home/rapa/pub/Moomins/asset/character/bat/rig/pub/scenes/v001/bat-animation-fly/source/bat_animation_fly.fbx
+2024-08-24 16:32:49: LOG: [WARNING] BindPose - Incomplete BindPose [nodes parents] - The following parent and/or ancestor node(s) is/are not part of the BindPose definition. Armature
+2024-08-24 16:32:49: LOG: [WARNING] Skin Definition - The imported scene has no initial binding position (Bind Pose) for the skin. 
+	The plug-in will compute one automatically. However, running the 'Go To Bind Pose' command 
+	may create unexpected results.   

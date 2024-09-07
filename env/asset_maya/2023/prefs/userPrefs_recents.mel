@@ -1,0 +1,32 @@
+//Maya Preference 2023 (Release 1)
+//
+//
+
+optionVar -version 3;
+
+// RecentFiles
+optionVar -cat "RecentFiles"
+ -sa "RecentFilesList"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/asset/prop/knife/lkd/wip/scenes/v001/knife_v001_w001.mb"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/seq/AFT/AFT_0010/ani/wip/scenes/v001/AFT_0010_v001_w001.mb"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/asset/env/building/mod/wip/scenes/v001/building_v001_w001.mb"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/asset/env/castle/mod/wip/scenes/v001/castle_v001_w001.mb"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/asset/env/highway/mod/wip/scenes/v001/highway_v001_w001.mb"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/asset/prop/book/mod/wip/scenes/v001/book_v001_w001.mb"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/asset/prop/car/mod/wip/scenes/v001/car_v001_w001.mb"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/asset/character/mat/lkd/wip/scenes/v001/mat_lkd_v001_w001.mb"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/asset/character/mat/lkd/wip/scenes/v001/mat_v001_w001.mb"
+ -sva "RecentFilesList" "/home/rapa/wip/Moomins/asset/character/mat/lkd/wip/scenes/v002/mat_lkd_v002_w001.mb"
+ -sa "RecentFilesTypeList"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ -sva "RecentFilesTypeList" "mayaBinary"
+ ;
+

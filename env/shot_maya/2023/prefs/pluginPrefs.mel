@@ -1,0 +1,5 @@
+//Maya Preference 2023 (Release 1)
+//
+//
+evalDeferred("autoLoadPlugin(\"\", \"mtoa\", \"mtoa\")");
+evalDeferred("autoLoadPlugin(\"\", \"modelingToolkit\", \"modelingToolkit\")");

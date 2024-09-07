@@ -1,0 +1,10 @@
+{
+    "desc": "Initializing SafeModeController..."
+}{
+    "file": "/home/rapa/wip/Moomins/seq/STG/STG_0020/lgt/wip/scenes/v001/STG_0020_v001_w001.mb",
+    "function": "open",
+    "reason": "Flagged Built-in Python Function - Security Warning",
+    "choice": "accept",
+    "action": "Allow",
+    "states": "createdWhileReading;executingScriptNode"
+}

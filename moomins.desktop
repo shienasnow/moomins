@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=MoominsLogin
+Exec=/usr/bin/python3.9 /home/rapa/git/pipeline/login/login.py
+Terminal=false
+Categories=Utility;Development;
+Icon=/home/rapa/git/pipeline/sourceimages/moomins.png

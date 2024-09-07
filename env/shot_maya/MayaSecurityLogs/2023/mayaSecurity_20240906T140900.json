@@ -1,0 +1,10 @@
+{
+    "desc": "Initializing SafeModeController..."
+}{
+    "file": "/home/rapa/wip/Moomins/seq/BRK/BRK_0010/ly/wip/scenes/v001/BRK_0010_v001_w001.mb",
+    "function": "open",
+    "reason": "Flagged Built-in Python Function - Security Warning",
+    "choice": "reject",
+    "action": "Deny",
+    "states": "createdWhileReading;executingScriptNode"
+}
