@@ -1,0 +1,9 @@
+# import sys
+# sys.path.append('/home/rapa/env/maya/2023/scripts')
+
+from importlib import reload
+import asset_import
+reload(asset_import)
+
+win = asset_import.Import()
+win.show()

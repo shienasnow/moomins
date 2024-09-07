@@ -1,0 +1,10 @@
+{
+    "desc": "Initializing SafeModeController..."
+}{
+    "file": "/usr/autodesk/maya2023/lib/python3.9",
+    "function": "os",
+    "reason": "Untrusted Python Module Import - Security Warning",
+    "choice": "always",
+    "action": "Allow",
+    "states": "createdWhileReading;executingScriptNode"
+}

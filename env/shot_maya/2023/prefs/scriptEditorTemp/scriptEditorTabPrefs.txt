@@ -1,0 +1,3 @@
+ScriptEditorSelectedTabIndex: 1
+ScriptEditorTabTypes: python
+ScriptEditorTabLabels: Python
