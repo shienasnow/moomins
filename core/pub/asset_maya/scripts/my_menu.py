@@ -10,9 +10,9 @@ sys.path.append(my_path)
 
 def asset_upload_func():
     global asset_upload_win
-    import asset_uploader
-    reload(asset_uploader)
-    asset_upload_win = asset_uploader.AssetUpload()
+    import moomins.core.pub.asset_maya.scripts.asset_upload as asset_upload
+    reload(asset_upload)
+    asset_upload_win = asset_upload.AssetUpload()
     asset_upload_win.show()
 
 def asset_publish_func():
