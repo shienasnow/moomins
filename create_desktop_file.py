@@ -69,34 +69,6 @@ class MainApplication:
         # self.show_login()  # 로그인 창 표시
         # return self.app.exec()  # Qt 이벤트 루프 시작
 
-    # def show_login(self):#없으며 필요 없음)
-    #     """로그인 창을 생성하고 화면에 표시하는 함수"""
-    #     # Login 객체 생성, Shotgun 클라이언트를 전달
-    #     self.login_window = login.Login()
-        
-    #     # 로그인 성공 시그널을 on_login_success 메서드에 연결
-    #     self.login_window.login_success.connect(self.on_login_success)
-        
-    #     # 로그인 창을 화면에 표시
-    #     self.login_window.show()
-
-    # def on_login_success(self, email):(없으며 필요 없음)
-    #     """로그인 성공 시 호출되는 함수. 로그인 창을 닫고 로더 창을 표시"""
-    #     print(f"로그인 성공: {email}")  # 로그인 성공 메시지와 이메일 출력
-        
-    #     # 로그인 창을 닫음
-    #     self.login_window.close()
-        
-    #     # 로더 창 표시
-    #     self.show_loader(email)
-
-    # def show_loader(self, email):
-    #     """로더 창을 생성하고 화면에 표시하는 함수"""
-    #     # MainWindow 객체 생성, 이메일과 Shotgun 클라이언트를 전달
-    #     self.loader_window = MainWindow(email=email, shotgun_client=self.shotgun_client)#여기 메인윈도우가 발동(본인에 맞게 수정
-        
-    #     # 로더 창을 화면에 표시
-    #     self.loader_window.show()
 
 if __name__ == "__main__":
     """스크립트가 직접 실행될 때 실행되는 코드 블록"""
