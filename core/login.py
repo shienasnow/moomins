@@ -18,9 +18,6 @@ from shotgun_api import ShotgunApi
 # API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
 
 
-
-
-
 class Login(QWidget):
 
     def __init__(self):
