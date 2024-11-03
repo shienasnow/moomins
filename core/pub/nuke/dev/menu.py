@@ -29,4 +29,3 @@ menu_moomins.addCommand("Asset Importer",open_asset_importer,"F10")
 menu_moomins.addCommand("Asset Uploader",open_asset_uploader,"F11")
 menu_moomins.addCommand("Nuke publish",open_nuke_publish,"F12")
 
-
