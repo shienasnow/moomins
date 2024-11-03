@@ -242,7 +242,7 @@ class ShotLoader (QWidget):
         elif task == "fx":
             image_path = "/home/rapa/git/pipeline/sourceimages/houdini.png"
         elif task  in ["prc", "cmp"]:
-            image_path = "/home/rapa/git/pipeline/sourceimages/Nuke.png"
+            image_path = "/home/rapa/git/pipeline/sourceimages/nuke.png"
         pixmap = QPixmap(image_path)
         scaled_pixmap = pixmap.scaled(60, 60,  Qt.KeepAspectRatio, Qt.SmoothTransformation)
         label_node_name1.setPixmap(scaled_pixmap)
@@ -373,9 +373,9 @@ class ShotLoader (QWidget):
 
     def run_nuke_nknc(self, file_path): # nknc 실행 용 메서드
         """
-        Nuke non-commercial 용 실행 메서드
+        nuke non-commercial 용 실행 메서드
         """
-        nuke_path = 'source /home/rapa/git/pipeline/env/Nuke.env && /opt/Nuke/Nuke15.1v1/Nuke15.1 --nc'
+        nuke_path = 'source /home/rapa/git/pipeline/env/nuke.env && /opt/nuke/Nuke15.1v1/Nuke15.1 --nc'
         command = f"{nuke_path} {file_path}" 
         subprocess.Popen(command, shell=True)
 
@@ -613,7 +613,7 @@ class ShotLoader (QWidget):
             elif task == "fx":
                 self.mX
             elif task in ["prc", "cmp"]:
-                file_path = f"Nuke {new_ver_path}/{seq_name}_{new_ver_num}_w001.nknc"
+                file_path = f"nuke {new_ver_path}/{seq_name}_{new_ver_num}_w001.nknc"
                 self.run_nuke_nknc(file_path)
 
         else:
