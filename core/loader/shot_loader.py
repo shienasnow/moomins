@@ -375,7 +375,7 @@ class ShotLoader (QWidget):
         """
         nuke non-commercial 용 실행 메서드
         """
-        nuke_path = 'source /home/rapa/git/pipeline/env/nuke.env && /opt/Nuke/Nuke15.1v1/Nuke15.1 --nc'
+        nuke_path = 'source /home/rapa/git/pipeline/env/nuke.env && /opt/nuke/Nuke15.1v1/Nuke15.1 --nc'
         command = f"{nuke_path} {file_path}" 
         subprocess.Popen(command, shell=True)
 
