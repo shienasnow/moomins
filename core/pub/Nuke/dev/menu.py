@@ -5,7 +5,7 @@ sys.path.append("/home/rapa/git/pipeline/api_scripts")
 from python.nuke_import import NukeImport
 from python.nuke_upload import NukeUpload
 from python.nuke_publish import NukePublish
-menu_bar = nuke.menu("Nuke")
+menu_bar = nuke.menu("nukenuke")
 
 def open_asset_importer():
     global importer
@@ -28,5 +28,4 @@ menu_moomins = menu_bar.addMenu("Pipeline")
 menu_moomins.addCommand("Asset Importer",open_asset_importer,"F10")
 menu_moomins.addCommand("Asset Uploader",open_asset_uploader,"F11")
 menu_moomins.addCommand("Nuke publish",open_nuke_publish,"F12")
-
 
