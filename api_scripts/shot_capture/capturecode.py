@@ -8,20 +8,17 @@ except:
     from PySide2.QtWidgets import QApplication, QWidget
     from PySide2.QtCore import Qt, QRect,Signal
     from PySide2.QtGui import QPainter
-    
-
            
 
 class Capture(QWidget):
     """
-    엄... 이게 마우스가 드래그 되는 부분이 위젯 범위를 넘어가면
+    마우스가 드래그 되는 부분이 위젯 범위를 넘어가면
     드래그 되는 영역에 대한 페인트가 칠해지지 않아서,
     투명 위젯 클래스를 추가하였음.
     이렇게 하니 드래그 영역 페인트를 잘 칠해줌.
     """
     SIGNAL_CAPTURE = Signal(bool)
 
-    
     def __init__(self, capture_path):
             super().__init__()
             self.start_pos = None
@@ -50,7 +47,6 @@ class Capture(QWidget):
         if self.start_pos:
             self.end_pos = event.pos()
             self.update()
-
 
     def mouseReleaseEvent(self, event):
 
@@ -82,7 +78,6 @@ class Capture(QWidget):
             painter = QPainter(self)
             painter.setPen(Qt.white)
             painter.drawRect(rect)
-
 
     def capture_screen(self):
 

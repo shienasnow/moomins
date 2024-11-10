@@ -8,9 +8,7 @@ except:
     from PySide2.QtWidgets import QApplication, QWidget
     from PySide2.QtCore import Qt, QRect,Signal
     from PySide2.QtGui import QPainter
-    
 
-           
 
 class Capture(QWidget):
     """
@@ -21,7 +19,6 @@ class Capture(QWidget):
     """
     SIGNAL_CAPTURE = Signal(bool)
 
-    
     def __init__(self, capture_path):
             super().__init__()
             self.start_pos = None
@@ -50,7 +47,6 @@ class Capture(QWidget):
         if self.start_pos:
             self.end_pos = event.pos()
             self.update()
-
 
     def mouseReleaseEvent(self, event):
 
@@ -82,7 +78,6 @@ class Capture(QWidget):
             painter = QPainter(self)
             painter.setPen(Qt.white)
             painter.drawRect(rect)
-
 
     def capture_screen(self):
 
