@@ -217,7 +217,7 @@ class Login(QWidget):
 
         if user_dept == "Asset":
             print(f"에셋 작업자입니다. {user_name}님 에셋 로더로 연결합니다.")
-            from loader import asset_loader # 파일 이름
+            from moomins.core.asset_maya.scripts.loader import asset_loader # 파일 이름
             global asset_window # login.py(메인 파일)에서 QApplication를 실행할 때 asset_window를 포함하도록
             asset_window = asset_loader.AssetLoader(user_id) # 클래스 이름
             asset_window.show()
