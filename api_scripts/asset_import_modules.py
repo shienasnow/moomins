@@ -14,7 +14,6 @@ def import_reference_asset(asset_path):
 
     # assign_shader_to_asset(reference_node)
 
-
 def assign_shader_to_asset(reference_node, shader_json_file, shader_ma_file):
     """
     애셋에 셰이더를 붙이는 함수입니다.
@@ -59,7 +58,6 @@ def assign_shader_to_asset(reference_node, shader_json_file, shader_ma_file):
         cmds.hyperShade(assign=name_space_shader)
         cmds.select(clear=True)
 
-
 def import_reference(asset_path):
     """
     애셋의 경로를 입력받으면 레퍼런스로 임포트하는 메서드입니다.
@@ -73,8 +71,6 @@ def import_reference(asset_path):
         return reference_node
     except:
         return None
-
-
 
 def get_reference_assets():
     """
@@ -99,8 +95,6 @@ def get_reference_assets():
 
     return reference_dict
 
-
-
 def update_reference_file_path(ref_node, new_path, pushButton_update):
     """
     레퍼런스 노드와 새로운 경로를 주면 레퍼런스 노드의 파일 경로를 업데이트 합니다.
@@ -111,7 +105,6 @@ def update_reference_file_path(ref_node, new_path, pushButton_update):
     cmds.file(new_path, loadReference=ref_node)
     pushButton_update.setEnabled(False)
     return ref_node
-
 
 def assgin_shader():
     shader_ma_file = "/show/4th_academy/assets/char/teapot/lookdev/wip/maya/data/shader.ma"
@@ -140,11 +133,16 @@ def set_render_resolution(undistortion_height, undistortion_width):
     cmds.setAttr("defaultResolution.width", int(undistortion_width))
     cmds.setAttr("defaultResolution.height", int(undistortion_height))
 
-
 def set_frame_range(start_frame, end_frame):
-
     # 타임 슬라이더의 시작 및 종료 프레임 설정
     cmds.playbackOptions(min=start_frame, max=end_frame)
 
     # 현재 프레임 범위도 동일하게 설정 (프레임 범위 안에서 현재 시작 및 종료 프레임 설정)
     cmds.playbackOptions(ast=start_frame, aet=end_frame)
+
+
+def get_current_file_directory():
+    current_file_path = cmds.file(q=True, sn=True)
+    print(f"현재 마야 파일 경로 : {current_file_path}")
+    # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001/AFT_0010_v001_w001.mb
+    return current_file_path

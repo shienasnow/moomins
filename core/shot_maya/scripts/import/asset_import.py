@@ -8,52 +8,45 @@ from glob import glob
 from configparser import ConfigParser
 from pprint import pprint
 from functools import partial
-from shotgun_api3 import shotgun
 from importlib import reload
-
-import maya.cmds as cmds
-import asset_import_modules
-reload(asset_import_modules)
 try:
     from PySide6.QtWidgets import QApplication, QWidget, QGridLayout
-    from PySide6.QtWidgets import QLabel, QCheckBox, QHBoxLayout, QVBoxLayout
-    from PySide6.QtWidgets import QMessageBox, QPushButton
+    from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QVBoxLayout
+    from PySide6.QtWidgets import QLabel, QMessageBox, QPushButton
     from PySide6.QtUiTools import QUiLoader
-    from PySide6.QtGui import QPixmap, QIcon
-    from PySide6.QtCore import QFile, QSize, Qt
-    from PySide6.QtCore import Signal
+    from PySide6.QtGui import QPixmap
+    from PySide6.QtCore import QFile, Qt, Signal
 except:
     from PySide2.QtWidgets import QApplication, QWidget, QGridLayout
-    from PySide2.QtWidgets import QLabel, QCheckBox, QHBoxLayout, QVBoxLayout
-    from PySide2.QtWidgets import QMessageBox, QPushButton
+    from PySide2.QtWidgets import QCheckBox, QHBoxLayout, QVBoxLayout
+    from PySide2.QtWidgets import QLabel, QMessageBox, QPushButton
     from PySide2.QtUiTools import QUiLoader
-    from PySide2.QtGui import QPixmap, QIcon
-    from PySide2.QtCore import QFile, QSize, Qt
-    from PySide2.QtCore import Signal
+    from PySide2.QtGui import QPixmap
+    from PySide2.QtCore import QFile, Qt, Signal
+from api_scripts.shotgun_api import ShotgunApi # shotgrid 모듈
+import api_scripts.asset_import_modules as maya # maya 모듈
 
-sys.path.append("/home/rapa/git/pipeline/api_scripts")
-from shotgun_api import ShotgunApi
+reload(maya)
+
 
 
 class Import(QWidget):
 
-    def __init__(self, user_id=94):
+    def __init__(self, user_id):
         super().__init__()
+
         self.user_id = user_id
-            
+    
         self.sg_cls = ShotgunApi()
         self.sg_cls.get_datas_by_id(self.user_id)
-        
-        # self.connect_sg()
-        # self.get_user_id() # Loader를 통해서 마야를 실행했을 때 터미널에 남아 있는 user_id를 받아서 user_name을 찾는다
+        self.get_user_id() # Loader를 통해서 마야를 실행했을 때 터미널에 있는 user_id를 받아서 user_name을 찾는다
 
         self.make_ui()
         self.event_func() # 이벤트 함수 모음
 
         self.get_shot_info_from_current_directory() # 현재 작업 파일 경로에서 데이터 추출
-        self.current_dict = asset_import_modules.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
+        self.current_dict = maya.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
         self.classify_task() # task 별로 다른 함수를 실행할 수 있도록 classyfy_task 함수에 task 전달
-
         self.compare_assets()
 
         self.get_linked_cam_link_info()
@@ -67,63 +60,39 @@ class Import(QWidget):
         self.ui.pushButton_import.clicked.connect(self.get_checked_row) # Import 버튼 누르면 선택한 리스트의 에셋 Import
         self.ui.pushButton_refresh.clicked.connect(self.refresh_sg) # Refresh 버튼 누르면 샷그리드 연동 새로고침
 
-    # def connect_sg(self):
-    #     URL = "https://4thacademy.shotgrid.autodesk.com"
-    #     SCRIPT_NAME = "moomins_key"
-    #     API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
 
-    #     self.sg = shotgun.Shotgun(URL,
-    #                             SCRIPT_NAME,
-    #                             API_KEY)
 
-    # def get_user_id(self): # Loader를 통해 마야를 실행했을 때 user_id 받아오기
-    #     try:
-    #         self.user_id = os.environ["USER_ID"] # loader에서 publish, upload, import로 user_id 전달
-    #     except:
-    #         self.user_id = 121 # 임시
+    def get_user_id(self): # Loader를 통해 마야를 실행했을 때 user_id 받아오기
+        try:
+            self.user_id = os.environ["USER_ID"] # loader에서 publish, upload, import로 user_id 전달
+        except:
+            QMessageBox.about(self, "경고", "유효한 사용자가 아닙니다")
 
-    def get_user_name(self): # user_id로 user_name 찾기
-        # user_info = self.sg.find_one("HumanUser", filters=[["id", "is", self.user_id]], fields=["name"])
-        # user_name = user_info["name"]
-    
-        user_datas = self.sg_cls.get_datas_by_id(self.user_id)
-        # print (user_datas) # {'type': 'HumanUser', 'id': 94, 'name': '주석 박', 'projects': [{'id': 188, 'name': 'Moomins', 'type': 'Project'}]}
+    def get_user_name(self): # self.user_name
+        # user_id로 user_name 찾는 모듈 사용
+        user_datas = self.sg_cls.get_datas_by_user_id(self.user_id)
         user_name = user_datas["name"]
-        
-        return user_name # 주석 박
+        self.user_name = user_name
 
     def get_shot_info_from_current_directory(self): # project, seq_name, seq_num, task, version, shot_id 추출
-        current_file_path = cmds.file(q=True, sn=True)
-        print(f"현재 마야 파일 경로 : {current_file_path}")
-        # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001/AFT_0010_v001_w001.mb
 
+        current_file_path = maya.get_current_file_directory()
         self.project = current_file_path.split("/")[4] # Moomins
         seq_name = current_file_path.split("/")[6] # AFT
         self.seq_num = current_file_path.split("/")[7] # AFT_0010
         self.task = current_file_path.split("/")[8] # ly
         self.version = current_file_path.split("/")[11] # v001
 
-        # # seq num로 shot_id 찾기
-        # shot_filter = [["code", "is", self.seq_num]]
-        # shot_fields = ["id"]
-        # shot_entity = self.sg.find_one("Shot", filters=shot_filter, fields=shot_fields)
-        # self.shot_id = shot_entity['id']
-        
-        # print (self.seq_num) # AFT_0010
-        
-        self.shot_id = self.sg_cls.get_shot_id(self.seq_num)
-    
-        # print (self.shot_id) # 1353
-
         self.ui.label_project.setText(self.project)
         self.ui.label_sqnum.setText(self.seq_num)
         self.ui.label_task.setText(self.task)
 
+        self.shot_id = self.sg_cls.get_shot_id(self.seq_num)
         print(f"현재 작업 샷 넘버 : {self.seq_num} (id : {self.shot_id})")
 
 
 
-# Task(ly, ani, lgt) 구분해서 다른 make ini 함수 실행
+# Task(ly, ani, lgt) 구분해서 ini를 만드는 다른 함수 실행
     def classify_task(self):
         print(f"현재 작업 Task : {self.task}")
 
@@ -144,32 +113,23 @@ class Import(QWidget):
 
         else: # Maya Shot 작업자가(ly, ani, lgt) 아닌 경우 아무것도 할 수 없도록
             print("마야에서 에셋을 import할 수 있는 작업 상태가 아닙니다.")
-            QMessageBox.about(self, "경고", "'Import Assets'는 maya를 사용하는 Shot 작업에서만 실행할 수 있습니다.\n현재 작업 중인 내용을 확인해주세요.")
+            QMessageBox.about(self, "경고", "'Import Assets'는 maya를 사용하는 Shot 작업에서만 실행할 수 있습니다.\n현재 작업 중인 task를 확인해주세요.")
 
 
 
 # Layout : shot number에 태그된 asset들(mod.mb 또는 rig.mb)의 정보 찾기
     def get_ly_assigned_assets(self): # shot에 태그된 asset id들을 가져와서 list로 만들어서 다음 함수에 넘긴다
-        # filter = [["code", "is", self.seq_num]]
-        # field = ["assets"]
-        # assigned_assets = self.sg.find_one("Shot", filters=filter, fields=field)
-        # asset_list = assigned_assets["assets"]
-        
-        assets_of_seq = self.sg_cls.get_assets_datas(self.seq_num)
+        assets_of_seq = self.sg_cls.get_assets_of_seq(self.seq_num)
         asset_list = assets_of_seq["assets"]
-        
-        # print (asset_list) # [{'id': 2009, 'name': 'lamp', 'type': 'Asset'}, {'id': 2008, 'name': 'mat', 'type': 'Asset'}, {'id': 2007, 'name': 'teapot', 'type': 'Asset'}]
-        
         # print(asset_list)
         # [{'id': 1546, 'name': 'bat', 'type': 'Asset'},
         # {'id': 1479, 'name': 'car', 'type': 'Asset'},
         # {'id': 1547, 'name': 'joker', 'type': 'Asset'}]
+
         asset_id_list = []
         for asset in asset_list:
             asset_id = asset["id"] # 1546
-            asset_id_list.append(asset_id)
-        # print ("*****")
-        # print (asset_id_list)
+            asset_id_list.append(asset_id) ###################### 이거 왜 한 번에 안하고 이렇게 id를 따로 뺐었지?
 
         self.make_asset_ini_for_ly(asset_id_list) # shot에 부여된 asset id 리스트를 넘겨준다
 
@@ -187,56 +147,47 @@ class Import(QWidget):
         self.asset_ini_for_ly["rendercam"]["asset version"] = linked_cam_info_dict["asset veresion"]
         self.asset_ini_for_ly["rendercam"]["asset pub date"] = linked_cam_info_dict["asset pub date"]
 
-        # mod, lkd 에셋들을 그 다음 섹션에 추가
+        # mod, lkd 에셋들을 카메라 다음 섹션에 추가
         # SG Asset Entity에서 가져오는 것 : 각 Asset의 Name, Status, Task
         for asset_id in asset_id_list:
             # print (asset_id)
-            # filter = [["id", "is", asset_id]] # [1546, 1479, 1547]
-            # field = ["code", "sg_status_list", "tasks"]
-            # asset_info = self.sg.find("Asset", filters=filter, fields=field) # [{'type': 'Asset', 'id': 1546, 'code': 'bat', 'sg_status_list': 'wip', 'description': "str", 'image': 'https://sg-media-usor-01.~~'},  'tasks': [{'id': 6353, 'name': 'Cloth', 'type': 'Task'}, {'id': 6350, 'name': 'Concept', 'type': 'Task'}, {'id': 6352, 'name': 'Groom', 'type': 'Task'}, {'id': 6351, 'name': 'Lookdev', 'type': 'Task'}, {'id': 6348, 'name': 'Model', 'type': 'Task'}, {'id': 6349, 'name': 'Rig', 'type': 'Task'}]}]
-            
+            # [1546, 1479, 1547]
             asset_info = self.sg_cls.get_asset_info(asset_id)
-            
+
             asset_info = asset_info[0]
             asset_name = asset_info["code"] # joker
             self.asset_ini_for_ly[asset_name] = {} # asset name을 section으로 사용
 
+
+            # task ID로 작업자, step 정보 가져오기 (lkd, mod, rig 알파벳 순서))
             # Asset에 연결된 모든 Task의 ID를 추출
             task_ids = [task['id'] for task in asset_info['tasks']] # [6353, 6350, 6352, 6351, 6348, 6349]
 
-            # task ID로 작업자 정보, step 가져오기 (lkd, mod, rig 알파벳 순서)
             for task_id in task_ids:
                 # tasks_info = self.sg.find("Task", [["id", "is", task_id]], ["task_assignees", "step", "sg_status_list"])
-                
+
                 tasks_info = self.sg_cls.get_tasks_info(task_id)
                 task_info = tasks_info[0]
-                
+
                 artist_list = task_info["task_assignees"]
                 for i in artist_list:
                     artist_info = i
                 asset_artist = artist_info["name"]
                 asset_task = task_info["step"]["name"]
                 asset_status = task_info["sg_status_list"]
-                # print(f"{asset_name}, {asset_task} : {asset_status}")
 
                 self.asset_ini_for_ly[asset_name]["asset artist"] = asset_artist
                 self.asset_ini_for_ly[asset_name]["asset task"] = asset_task
                 self.asset_ini_for_ly[asset_name]["asset status"] = asset_status
 
-                # 경로를 task entity에서 sg_description으로 가져오기
-                # filter = [["id", "is", task_id]]
-                # field = ["sg_description"]
-                # path_info = self.sg.find_one("Task", filters=filter, fields=field)
-                
+
+                # 파일 경로, 펍 날짜
                 path_info, date_info = self.sg_cls.get_path_info(task_id)
-                
+
                 path_description = str(path_info["sg_description"]) # 펍된 파일 경로
                 pub_file_name = os.path.basename(path_description) # BRK_0010_v001.mb
                 self.asset_ini_for_ly[asset_name]["asset pub directory"] = path_description
 
-                # task id로 updated at을 가져오기
-                # field2 = ["updated_at"]
-                # date_info = self.sg.find_one("Task", filters=filter, fields=field2)
                 pub_dates = date_info["updated_at"]
                 pub_date = str(pub_dates).split("+")[0]
                 self.asset_ini_for_ly[asset_name]["asset pub date"] = pub_date
@@ -247,8 +198,7 @@ class Import(QWidget):
             self.asset_ini_for_ly[asset_name]["asset file ext"] = file_ext # .mb
             self.asset_ini_for_ly[asset_name]["asset version"] = version # v001
 
-        # print("\n*&*&*&*&*&*&*&*&*&*&*&*&* ini 확인 *&*&*&*&*&*&*&*&*&*&*&*&")
-        # ini 파일 확인용 출력
+        print("*"*20,"\nini 파일 확인용 출력", "*"*20)
         for section in self.asset_ini_for_ly.sections():
             for k, v in self.asset_ini_for_ly[section].items():
                 print(f"{section}, {k}: {v}")
@@ -268,44 +218,26 @@ class Import(QWidget):
             #     # joker, asset pub date: 2024-08-23 17:21:08
 
 
-
 # Animation, Lighting : 같은 shot number에 해당되는 ly, ani, fx의 정보들 찾기
     def get_lgt_assgined_assets(self): # task id에 해당되는 ly, ani, fx의 abc 파일 경로를 찾습니다
-        # filter_ly = [["entity", "is", {"type" : "Shot", "id" : self.shot_id}], ["step", "is", {"type": "Step", "id": 277}]] # shot_id + ly의 step id
-        # filter_ani = [["entity", "is", {"type" : "Shot", "id" : self.shot_id}], ["step", "is", {"type": "Step", "id": 106}]] # shot_id + ani의 step id
-        # filter_fx = [["entity", "is", {"type" : "Shot", "id" : self.shot_id}], ["step", "is", {"type": "Step", "id": 276}]] # shot_id + fx의 step id
-        # field = ["id", "sg_description"] # pub abc 파일 경로, task id
-
-        # ly_asset_info = self.sg.find("Task", filters=filter_ly, fields=field)
-        # ani_asset_info = self.sg.find("Task", filters=filter_ani, fields=field)
-        # fx_asset_info = self.sg.find("Task", filters=filter_fx, fields=field)
-        
         ly_asset_info, ani_asset_info, fx_asset_info = self.sg_cls.get_lgt_assgined_assets(self.shot_id)
-        
-        ly_asset_info = ly_asset_info[0]
-        ani_asset_info = ani_asset_info[0]
-        fx_asset_info = fx_asset_info[0]
 
         ly_asset_id = ly_asset_info["id"] # 6328
         ani_asset_id = ani_asset_info["id"] # 6326
         fx_asset_id = fx_asset_info["id"] # 6331
+
         ly_asset_directory = ly_asset_info["sg_description"] # /home/rapa/pub/Moomins/seq/AFT/AFT_0010/ly/pub/scenes/v001/AFT_0010_ly_v001.abc
         ani_asset_directory = ani_asset_info["sg_description"] # /home/rapa/pub/Moomins/seq/AFT/AFT_0010/ani/pub/scenes/v001/AFT_0010_ani_v001.abc
         fx_asset_directory = fx_asset_info["sg_description"] # /home/rapa/pub/Moomins/seq/AFT/AFT_0010/fx/pub/scenes/v001/AFT_0010_fx_v001.abc
 
-        # shot_asset_id_list = [ly_asset_id, ani_asset_id, fx_asset_id]
-        # shot_asset_list = [ly_asset_directory, ani_asset_directory, fx_asset_directory]
         shot_asset_dict = {}
         shot_asset_dict[ly_asset_id] = ly_asset_directory
         shot_asset_dict[ani_asset_id] = ani_asset_directory
         shot_asset_dict[fx_asset_id] = fx_asset_directory
-
-        # self.get_ini_data_from_sg(shot_asset_id_list)
         self.make_asset_ini_for_lgt(shot_asset_dict)
 
-    def make_asset_ini_for_lgt(self, shot_asset_dict): # ★ ly, ani, fx에서 pub한 파일의 정보가 담긴 ini 만들기
+    def make_asset_ini_for_lgt(self, shot_asset_dict): # ly, ani, fx에서 pub한 파일의 정보가 담긴 ini 만들기
         self.asset_ini_for_lgt = ConfigParser()
-        print ("make_asset_ini_for_lgt")
 
         # Rendercam 섹션을 가장 처음에 추가
         linked_cam_info_dict = self.get_linked_cam_link_info()
@@ -317,40 +249,23 @@ class Import(QWidget):
         self.asset_ini_for_lgt["rendercam"]["asset file ext"] = linked_cam_info_dict["asset file ext"]
         self.asset_ini_for_lgt["rendercam"]["asset version"] = linked_cam_info_dict["asset veresion"]
         self.asset_ini_for_lgt["rendercam"]["asset pub date"] = linked_cam_info_dict["asset pub date"]
-        print ("11111")
-        print (self.asset_ini_for_lgt)
 
         # ly, ani, fx 에셋들을 그 다음 섹션에 추가
         for asset_id, asset_directory in shot_asset_dict.items():
-            print (asset_id, asset_directory)
+            asset_datas = self.sg_cls.get_asset_datas(asset_id)
+            asset_data = asset_datas[0]
 
-            # filter = [["id", "is", asset_id]]
-            # asset_names = self.sg.find("Task", filters=filter, fields=["content", "step"])
-            
-            print ("sdflkjsdklfjsdflksdjf")
-            asset_names, sg_data = self.sg_cls.get_asset_data(asset_id)
-            print ("asset_names")
-            print (asset_names)
-            print ("sg_data")
-            print (sg_data)
-            
-            asset_names = asset_names[0] # {'type': 'Task', 'id': 6328, 'content': 'AFT_0010_ly', 'step': {'id': 277, 'name': 'ly', 'type': 'Step'}}
-            print ("asset_names" , asset_names)
-            asset_name = asset_names["content"] # AFT_0010_ly, AFT_0010_ani, AFT_0010_fx
-            print ("asset_name" , asset_name)
-            asset_task = asset_names["step"]["name"]
-            print ("asset_task" , asset_task)
-            print ("11111.5")
-
-
-            print ("asset_directory", asset_directory)
+            artist_data_list= asset_data["task_assignees"]
+            for i in artist_data_list:
+                artist_data = i
+            asset_artist = artist_data["name"]
+            asset_status = asset_data["sg_status_list"]
+            asset_pub_dates = asset_data["updated_at"]
+            asset_pub_date = str(asset_pub_dates).split("+")[0]
+            asset_name = asset_data["content"] # AFT_0010_ly, AFT_0010_ani, AFT_0010_fx
+            asset_task = asset_data["step"]["name"]
             file_name = os.path.basename(asset_directory) # AFT_0010_lgt_v001.abc
-
-            print ("file_name", file_name)
-
             file_ext = "." + file_name.split(".")[-1]
-
-            print ("file_ext", file_ext)
 
             # ani 경로에서 필요한 거 따기
             self.asset_ini_for_lgt[asset_name] = {}
@@ -358,26 +273,9 @@ class Import(QWidget):
             self.asset_ini_for_lgt[asset_name]["asset task"] = asset_task # 해당 에셋의 task
             self.asset_ini_for_lgt[asset_name]["asset file ext"] = file_ext # .abc
             self.asset_ini_for_lgt[asset_name]["asset version"] = self.version # v001
-
-            print ("222222")
-
-            # sg에서 찾아서 가져오기 (asset artist, asset stuats, asset pub date)
-            # filter = [["id", "is", asset_id]]
-            # field = ["task_assignees", "sg_status_list", "updated_at"]
-            # sg_data = self.sg.find("Task", filters=filter, fields=field)
-            sg_data = sg_data[0]
-            artist_data_list= sg_data["task_assignees"]
-            for i in artist_data_list:
-                artist_data = i
-            asset_artist = artist_data["name"]
-            asset_status = sg_data["sg_status_list"]
-            asset_pub_date = sg_data["updated_at"]
-            asset_pub_date = str(asset_pub_date).split("+")[0]
-
             self.asset_ini_for_lgt[asset_name]["asset artist"] = asset_artist # hyoeun seol
             self.asset_ini_for_lgt[asset_name]["asset status"] = asset_status # pub
             self.asset_ini_for_lgt[asset_name]["asset pub date"] = asset_pub_date # 2024-08-28 14:42:12
-            print ("33333")
 
         # self.asset_ini_for_lgt 출력 확인
         for section in self.asset_ini_for_lgt.sections():
@@ -425,10 +323,9 @@ class Import(QWidget):
         self.label_img = DoubleClickableLabel("THUMBNAIL")
         self.label_img.setFixedSize(320, 180) # 16:9 비율 고정
         self.label_img.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        self.ui.verticalLayout_2.insertWidget(2, self.label_img)
 
-        user_name = self.get_user_name()        
-        self.ui.label_artist.setText(user_name)
+        self.ui.verticalLayout_2.insertWidget(2, self.label_img)
+        self.ui.label_artist.setText(self.user_name)
 
     def make_table_ui_for_ly(self): # asset 갯수만큼 컨테이너 생성하고 ini 정보를 컨테이너에 넣기
 
@@ -459,7 +356,6 @@ class Import(QWidget):
         # self.asset_ini_for_ani에 모아놓은 에셋 정보들을 각 컨테이너에 넣기
         row_idx = 0
         for section in self.asset_ini_for_ani.sections():
-            # print ("section", section, row_idx)
             self.table_ui_contents(section, row_idx)
             row_idx += 1
 
@@ -472,13 +368,11 @@ class Import(QWidget):
         # self.asset_ini_for_lgt에 모아놓은 에셋 정보들을 각 컨테이너에 넣기
         row_idx = 0
         for section in self.asset_ini_for_lgt.sections():
-            # print ("section", section, row_idx)
             self.table_ui_contents(section, row_idx)
             row_idx += 1
 
 
-
-# rendercam에 링크된 마지막 Task 카메라 정보를 담은 dictionary 리턴
+# rendercam에 링크된 마지막 Task의 카메라 정보를 담은 dictionary 리턴
     def get_linked_cam_link_info(self):
 
         shot_camera_directory = self.sg_cls.get_link_camera_directory(self.shot_id)
@@ -525,9 +419,11 @@ class Import(QWidget):
         self.checkbox.setObjectName("checkbox_import_asset")
         self.checkbox.setChecked(True)
         self.checkbox.setFixedWidth(20)
+
         # h_layout.addWidget(self.checkbox) # 왼쪽에 체크박스 추가
         checkbox_layout.addWidget(self.checkbox)
 
+        # 사용할 ini 파일 선택
         if self.task == "ly":
             ini = self.asset_ini_for_ly
         elif self.task == "ani":
@@ -591,17 +487,17 @@ class Import(QWidget):
         # asset status
         label_asset_status = QLabel()
         if ini[section]["asset status"] == "wtg":
-            image_path = "/home/rapa/git/pipeline/sourceimages/wtg.png"
+            image_path = "/home/rapa/git/moomins/sourceimages/wtg.png"
         elif ini[section]["asset status"] == "re":
-            image_path = "/home/rapa/git/pipeline/sourceimages/re.png"
+            image_path = "/home/rapa/git/moomins/sourceimages/re.png"
         elif ini[section]["asset status"] == "wip":
-            image_path = "/home/rapa/git/pipeline/sourceimages/wip.png"
+            image_path = "/home/rapa/git/moomins/sourceimages/wip.png"
         elif ini[section]["asset status"] == "pub":
-            image_path = "/home/rapa/git/pipeline/sourceimages/pub.png"
+            image_path = "/home/rapa/git/moomins/sourceimages/pub.png"
         elif ini[section]["asset status"] == "sc":
-            image_path = "/home/rapa/git/pipeline/sourceimages/sc.png"
+            image_path = "/home/rapa/git/moomins/sourceimages/sc.png"
         elif ini[section]["asset status"] == "fin":
-            image_path = "/home/rapa/git/pipeline/sourceimages/fin.png"
+            image_path = "/home/rapa/git/moomins/sourceimages/fin.png"
 
         pixmap = QPixmap(image_path)
         scaled_pixmap = pixmap.scaled(30, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -663,7 +559,6 @@ class Import(QWidget):
         pushButton_update.clicked.connect(lambda: asset_import_modules.update_reference_file_path(ref_node, new_path, pushButton_update))
 
         # 컨테이너 위젯에 h_ly 설정
-
         layout = QHBoxLayout()
         layout.addLayout(checkbox_layout)
         layout.addLayout(assetname_artist_layout)
