@@ -3,12 +3,10 @@ import os
 import re
 import subprocess    
 import datetime
-import threading
-from functools import partial
 import nuke
-from shotgun_api3 import Shotgun
-from shotgun_api import ShotgunApi
-from nuke_api import NukeApi
+from moomins.api_scripts.shotgun_api import ShotgunApi
+from moomins.api_scripts.nuke_api import NukeApi
+
 
 try:
     from PySide6.QtWidgets import QApplication, QWidget, QTableWidget
@@ -31,24 +29,35 @@ class NukeUpload(QWidget):
 
     def __init__(self):
         super().__init__()
-        # self.user_id = os.environ["USER_ID"] 
+        self.user_id = os.environ["USER_ID"]
+        self.sg_api = ShotgunApi()
+        self.nuke_api = NukeApi()
 
-        self.sg_cls = ShotgunApi()
-        self.nk_cls = NukeApi()
-
-        self.make_ui()
-        
-        self.get_selected_nodes()
-        self.set_table_result_widget()
-
-        self.event_func()
-
-
-    def make_ui(self):
+        # Make UI
         my_path = os.path.dirname(__file__)
         ui_file_path = my_path + "/nuke_upload.ui"
         self.ui_file = QFile(ui_file_path)
         self.make_ui_center()
+
+        self.table = self.ui.tableWidget_result
+        self.table.setRowCount(1)
+        self.table.setColumnCount(1)
+        self.table.setColumnWidth(0, 470)
+        self.table.setRowHeight(0, 50)
+        self.table.setEnabled(False)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.make_ui()
+
+        self.check_before_open_ui()
+        self.set_table_result_widget()
+
+        # Event Function
+        self.ui.pushButton_render.clicked.connect(self.push_render_button)
+        self.table.cellDoubleClicked.connect(self.double_click_result_table_widget)
+        self.ui.pushButton_upload.clicked.connect(self.sg_status_update)
+        self.ui.pushButton_upload.clicked.connect(self.sg_thumbnail_upload)
+        self.ui.pushButton_upload.clicked.connect(self.sg_mov_upload)
+
 
     def make_ui_center(self): # UI를 화면 중앙에 배치
         qr = self.frameGeometry()
@@ -56,34 +65,23 @@ class NukeUpload(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-        
-    def get_selected_nodes(self):   # 선택한 노드가 있는지 확인
-        selected_nodes = nuke.selectedNodes()
-        if not selected_nodes:
-            nuke.message("선택한 노드가 없습니다.")
-            return
-        self.check_node_count(selected_nodes)
-        
-    def check_node_count(self,selected_nodes): # 선택한 노드가 하나인지 확인
-        selected_nodes = nuke.selectedNodes()
-        if not len(selected_nodes) == 1:
-            nuke.message("하나의 노드만 선택해주세요")
-            return
-        selected_node = selected_nodes[0]
-        
-        self.check_node_class(selected_node)
+    def check_before_open_ui(self):
+        nodes = self.nuke_api.get_selected_nodes()
+        if not nodes:
+            return nuke.message("None Selected")
+        if len(nodes) is not 1:
+            return nuke.message("Select One Node")
+        if self.nuke_api.get_node_class(nodes[0]) is not "Write":
+            return nuke.message("Select Write Node")
+        node_name = nodes[0].name()
+        if not self.nuke_api.check_read_node_connection(node_name):
+            return nuke.message("Connect Read Node")
 
-    def check_node_class(self,selected_node): # 선택한 노드가 Write 노드인지 , Write노드면 Read노드가 연결되어있는지 확인
-        if not selected_node.Class() == "Write":
-            nuke.message("Write노드를 선택해주세요")
-            return
-        node_name = selected_node.name()
-        if not self.nk_cls.check_read_node_connection(node_name):
-            nuke.message("Write 노드가 연결된 Read 노드가 없습니다.")
-            return
-        self.show_ui_with_node_name(node_name)
+        self.show_ui(node_name)
+
+
         
-    def show_ui_with_node_name(self,node_name): # 위에 과정을 다 거치면 ui를 띄우기
+    def show_ui(self,node_name): # 위에 과정을 다 거치면 ui를 띄우기
         self.ui_file.open(QFile.ReadOnly)
         loader = QUiLoader()
         self.ui = loader.load(self.ui_file, self)
@@ -92,44 +90,26 @@ class NukeUpload(QWidget):
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint) # UI 최상단 고정
         self.ui_file.close()     
 
-
-    def event_func(self):
-        self.ui.pushButton_render.clicked.connect(self.push_render_button)
-        self.table_result.cellDoubleClicked.connect(self.double_click_result_table_widget)
-
-        self.ui.pushButton_upload.clicked.connect(self.sg_status_update)
-        self.ui.pushButton_upload.clicked.connect(self.sg_thumbnail_upload)
-        self.ui.pushButton_upload.clicked.connect(self.sg_mov_upload)
-
-
-
     def get_index(self,row,_):
         self.row = row
 
-    def set_table_result_widget(self):
-        self.table_result = self.ui.tableWidget_result
-        self.table_result.setRowCount(1) 
-        self.table_result.setColumnCount(1)
-        self.table_result.setColumnWidth(0, 470)
-        self.table_result.setRowHeight(0, 50)
-        self.table_result.setEnabled(False)
-        self.table_result.setEditTriggers(QTableWidget.NoEditTriggers)
 
     def push_render_button(self):
 
         render_path = nuke.root().name().replace("scenes","images")
         if not render_path:
+            # /home/rapa/wib/Moomins/seq/BRK/BRK_0010/cmp/wib/images/v001
             os.makedirs(render_path)
-        # /home/rapa/wib/Moomins/seq/BRK/BRK_0010/cmp/wib/images/v001
-        file_name = render_path.split("/")[-1]
-        
+
         # BRK_0010_v001_w001.nknc
-        render_file_name = file_name.replace(".nknc",".%04d.jpg")
+        file_name = render_path.split("/")[-1]
+
         # BRK_0010_v001_w001.%04d.jpg
-        full_render_path = render_path.replace(file_name,render_file_name)
-        print(full_render_path)
+        render_file_name = file_name.replace(".nknc",".%04d.jpg")
+
         # /home/rapa/wib/Moomins/seq/BRK/BRK_0010/cmp/wib/images/v001/BRK_0010_v001_w001.%04d.jpg
-        
+        full_render_path = render_path.replace(file_name,render_file_name)
+
         start_frame = nuke.root().firstFrame()
         end_frame = nuke.root().lastFrame()
         node_name = self.ui.label_node_name.text().strip()
@@ -150,9 +130,6 @@ class NukeUpload(QWidget):
         jpg로 렌더한 파일들을 ffmpeg을 이용해 slate를 넣은
         mov로 변환시키는 함수.
         """
-        print(render_file_path)
-        # /home/rapa/wib/Moomins/seq/BRK/BRK_0010/cmp/wib/images/v001/BRK_0010_v001_w001.%04d.jpg
-        
         split_path = render_file_path.split("/")
         project = split_path[4]                               # Moomins
         task = split_path[8]                              # cmp
@@ -161,8 +138,8 @@ class NukeUpload(QWidget):
 
         mov_file_name = os.path.basename(mov_file_path)
         # /home/rapa/wib/Moomins/seq/BRK/BRK_0010/cmp/wib/images/v001/BRK_0010_v001_w001.mov
-        artist_name = "juseok"                                         # user_id 를 임포트 받아서 해야한다.
-        frame_range = f"{start_frame}-{end_frame}"                  # 1001-1050 
+        artist_name = self.sg_api.get_name_by_id(user_id=self.user_id)
+        frame_range = f"{start_frame}-{end_frame}"
         frame_data = f"%{{n}}/{frame_range}:start_number={start_frame}"
         
 
@@ -195,18 +172,17 @@ class NukeUpload(QWidget):
         # 리스트를 공백으로 구분하여 결합
         command = " ".join(command_list)
         process = subprocess.Popen(command, 
-                               stdout=subprocess.PIPE,   # python 코드를 읽을수 있게 하는 코드
-                               stderr=subprocess.STDOUT, # 오류메세지 표준출력s
-                               universal_newlines=True,  # 줄바꿈 자동
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, # print Error message
+                               universal_newlines=True,  # line change automatic
                                shell=True
                                )
-        print(mov_file_path)
-        # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/cmp/wip/images/v001
-
         self.mov_file_path = mov_file_path
         nuke.message("Render Complete")
 
         self.make_table_widget_result(mov_file_path)
+
+        # delete image option
         # self.delete_jpg_file(mov_file_path)
 
 
@@ -214,8 +190,8 @@ class NukeUpload(QWidget):
         
     def delete_jpg_file(self,mov_file_path):
         """
-        mov와 jpg가 있는 폴더에 jpg 첫번째파일(썸네일)을 제외하고
-        나머지 jpg 파일들을 삭제하고 테이블위젯에 데이터를 보내는 함수        
+        This function delete jpg files.(remain thumnail image)
+        if you don't want delete files, cancle this function
         """
         render_path = os.path.dirname(mov_file_path)
         pattern = re.compile(r'(\d{4})\.jpg$')              # %04d.jpg 로 패턴을 잡는다.
@@ -224,39 +200,41 @@ class NukeUpload(QWidget):
             match = pattern.search(filename)
             if match:
                 frame_number = match.group(1)               # (\d{4}) 4자리 숫자를 반환.
-                if frame_number != "1001":
+                if frame_number is not "1001":
                     remove_file_path = os.path.join(render_path, filename)
                     os.remove(remove_file_path)
         files = os.listdir(render_path)
+
         for file in files:
-            print(file)
             _,ext = os.path.splitext(file)
-            if ext == ".jpg":
+            if ext is ".jpg":
                 result_image_path = os.path.join(render_path,file)
                 break
 
         if not result_image_path:
-            return None
-        
+            return
         self.thumbnail_path = result_image_path
         
-        self.make_table_widget_result(mov_file_path)
+        self.make_mov_table(mov_file_path)
 
-    def double_click_result_table_widget(self): # 더블클릭시 동영상 재생
+    def double_click_result_table_widget(self):
+        '''
+        if double Click, play mov file
+        '''
         try:
             process = subprocess.Popen(["vlc", self.mov_file_path])
         except:
-            nuke.message("파일이 없습니다.")
+            nuke.message("None File.")
 
-    def make_table_widget_result(self,path):
-        self.table_result.setEnabled(True)
+    def make_mov_table(self,mov_path):
+        self.table.setEnabled(True)
         # /home/rapa/wib/Moomins/seq/BRK/BRK_0010/cmp/wib/images/v001/BRK_0010_v001_w001.mov
         container_widget = QWidget()
         grid_layout = QGridLayout()
         container_widget.setLayout(grid_layout)
         self.ui.tableWidget_result.setCellWidget(0, 0, container_widget)
 
-        file_name = os.path.basename(path)    
+        file_name = os.path.basename(mov_path)
         label_path = QLabel()
         # label_path.setText(f"File name : {file_name}")
         label_path.setText(file_name)        
