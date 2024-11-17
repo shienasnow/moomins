@@ -43,15 +43,11 @@ class NukePublish(QWidget):
         self.move(qr.topLeft())
 
     def node_info(self):
-<<<<<<< HEAD
         nodes = self.nuke_api.get_selected_nodes()
         if len(nodes) is not 1:
-            return
-=======
-        nodes = self.nuke_api.selected_nodes()
->>>>>>> main
-        root_node = nuke.root()
+            return nuke.message("Select one node")
         node = nodes[0]
+        root_node = nuke.root()
         node_name = node["name"].value()
         first_frame = int(root_node["first_frame"].value())
         str_first_frame = str(first_frame)
@@ -88,7 +84,6 @@ class NukePublish(QWidget):
         nuke.execute(node, first_frame, last_frame)
         last_frame_number = int(last_frame)
         highest_exr_number = self.nuke_api.get_last_exr_num()
-        # 확인 후 메시지 설정
         if highest_exr_number  == last_frame_number:
             fin_text = f"{self.ui.label_seq_number.text()}_comp_{self.ui.label_version.text()}_{self.ui.node_name_text.text()}.exr이 publish 되었습니다."
             self.ui.pub_finsh_text.setText(fin_text)
