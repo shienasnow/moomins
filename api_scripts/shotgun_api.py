@@ -21,6 +21,25 @@ class ShotgunApi:
         
         return URL
 
+<<<<<<< HEAD
+    def get_project_by_id(self, user_id): # 로그인된 유저의 데이터를 가져오는 함수
+
+
+        filters = [["id", "is", user_id]]
+        fields = ["projects"]
+        # entity # 조건에맞는 사람의 # 이 필드들을 가져와라.    
+        project = self.sg.find_one("HumanUser", filters=filters, fields=fields)
+
+        return project["projects"]
+        #[{'id': 188, 'name': 'Moomins', 'type': 'Project'}]
+
+    def get_name_by_id(self,user_id):
+        filters = [["id", "is", user_id]]
+        fields = ["name"]
+        name = self.sg.find_one("HumanUser", filters=filters, fields=fields)
+        return name["name"]
+
+=======
     def get_datas_by_user_id(self, user_id): # 로그인된 유저의 데이터를 가져오는 함수  
 
         filters = [["id", "is", user_id]]
@@ -30,17 +49,16 @@ class ShotgunApi:
         if isinstance(user_datas, dict):
             return user_datas
         # {'type': 'HumanUser', 'id': 105, 'name': '다미 김', 'projects': [{'id': 188, 'name': 'Moomins', 'type': 'Project'}]}
+>>>>>>> main
 
     def get_task_data(self, user_id): # Shot 작업자에게 할당된 데이터 정보 가져오기 
         """
         shot 작업자의 user data 가져오기
         """
         # user_id = 121
-        user_data = self.get_datas_by_id(user_id)  
-        shot_user_id = user_data["id"]
-        user_name = user_data["name"]
+        user_name = self.get_name_by_id(user_id)
 
-        filters = [["task_assignees", "is", {'id': shot_user_id, 'name': user_name, 'type': 'HumanUser'}]]
+        filters = [["task_assignees", "is", {'id': user_id, 'name': user_name, 'type': 'HumanUser'}]]
         fields = ["projects", "entity", "task_assignees", "step", "sg_status_list", "start_date", "due_date", "project"]
         datas_list = self.sg.find("Task", filters=filters, fields=fields) # 리스트에 싸여진 딕셔너리들 데이터
         
@@ -91,10 +109,10 @@ class ShotgunApi:
         return seq_frame_list,datas_list
         
     def sg_status_update(self,asset_name,task):  ################# status update
-        print("Shotgrid Status Update")
-
         # project id 구하기
         project_name = "Moomins"
+        # project name을 받든 project id로 가져와서 project 이름을 구하는 함수를 짜서 거기서 이름을 가져오던 해야할것같습니다.
+
         project = self.sg.find_one("Project", [["name", "is", project_name]], ["id", "name"])
 
         # asset id 구하기
@@ -107,10 +125,10 @@ class ShotgunApi:
         step = self.sg.find_one("Step",[["code", "is", task]], ["id"])              ####### 이것두 가져와야댐
         step_id = step["id"]
 
-        print(asset_info) # {'type': 'Asset', 'id': 2008}
-        print(asset_name) # mat
-        print(asset_id) # 2008
-        print(step_id) # 16
+        # asset_info # {'type': 'Asset', 'id': 2008}
+        # asset_name # mat
+        # asset_id # 2008
+        # step_id # 16
 
         filter =[
             ["entity", "is", {"type": "Asset", "id": asset_id}],
@@ -127,15 +145,13 @@ class ShotgunApi:
 
 
 # login
-    def get_dept(self, shotgrid_id): # 사용자 이름, Department 정보 가져오기
-        # print(shotgrid_id) # 작업자의 id
-        
-        filter_dept = [["id", "is", shotgrid_id]]
+    def get_dept_by_id(self, user_id): # 사용자 이름, Department 정보 가져오기
+        filter_dept = [["id", "is", user_id]]
         field_dept = ["name", "department"]
         datas = self.sg.find_one("HumanUser", filters=filter_dept, fields=field_dept) # "~"에서 filters 조건에 맞는 fields를 찾는다
-        # print(datas) # {'type': 'HumanUser', 'id': 121, 'name': 'hyoeun seol', 'department': {'id': 41, 'name': 'Shot', 'type': 'Department'}}
+        # {'type': 'HumanUser', 'id': 121, 'name': 'hyoeun seol', 'department': {'id': 41, 'name': 'Shot', 'type': 'Department'}}
 
-        return datas
+        return datas["department"]
     
     def get_shotgrid_email(self, input_id, input_pw):
 
@@ -154,31 +170,36 @@ class ShotgunApi:
         filter = [["id", "is", shot_id]]
         field = ["description"]
         camera_info = self.sg.find_one("Shot", filters=filter, fields=field)
-        shot_camera_directory = camera_info["description"]
 
-        return shot_camera_directory
+        return camera_info["description"]
     
     def get_project_res_to_project_name(self,project_name):
         shot_filter = [["name", "is", project_name]]
         shot_fields = ["sg_resolutin_width","sg_resolution_height"]
         project_res_list = self.sg.find("Project", filters=shot_filter, fields=shot_fields)
-        project_res = project_res_list[0]
         
         
-        return project_res
+        return project_res_list[0]
     
     def get_shot_undistortion_size_to_seq_num(self,seq_num):
         shot_filter = [["code", "is", seq_num]]
         shot_fields = ["sg_undistortion_height","sg_undistortion_width"]
         undistortion_size_list = self.sg.find("Shot", filters=shot_filter, fields=shot_fields)
-        undistortion_size = undistortion_size_list[0]
-        
-        return undistortion_size
+
+        return undistortion_size_list[0]
         
     def get_shot_frame_range_to_seq_num(self,seq_num):
         shot_filter = [["code", "is", seq_num]]
         shot_fields = ["sg_cut_in","sg_cut_out"]
         frame_range_list = self.sg.find("Shot", filters=shot_filter, fields=shot_fields)
+<<<<<<< HEAD
+
+        return frame_range_list[0]
+    
+    def get_shot_due_date_to_seq_num(self, user_id, seq_num):
+        user_name = self.get_name_by_id(user_id)
+        filters = [["task_assignees", "is", {'id': user_id, 'name': user_name, 'type': 'HumanUser'}]]
+=======
         frame_range = frame_range_list[0]
         
         return frame_range
@@ -191,7 +212,9 @@ class ShotgunApi:
         user_name = user_data["name"]
 
         filters = [["task_assignees", "is", {'id': shot_user_id, 'name': user_name, 'type': 'HumanUser'}]]
+>>>>>>> main
         fields = ["due_date","entity"]
+
         user_entity_list = self.sg.find("Task", filters=filters, fields=fields)
         user_entity = user_entity_list[0]
         date_list = []
@@ -217,6 +240,19 @@ class ShotgunApi:
         shot_id = shot_entity['id']
         
         return shot_id
+<<<<<<< HEAD
+    
+    def get_assets_by_seq_num(self, seq_num):
+        
+        filter = [["code", "is", seq_num]]
+        field = ["assets"]
+        assets_by_seq = self.sg.find_one("Shot", filters=filter, fields=field)
+        
+        return assets_by_seq
+    
+    def get_asset_info_by_asset_id(self, asset_id):
+        
+=======
 
     def get_assets_of_seq(self, seq_num): # 시퀀스에 해당되는 에셋들을 구합니다.
         filter = [["code", "is", seq_num]]
@@ -226,6 +262,7 @@ class ShotgunApi:
         return assets_of_seq
 
     def get_asset_info(self, asset_id): # asset id로 에셋 정보를 구합니다.
+>>>>>>> main
         filter = [["id", "is", asset_id]] # [1546, 1479, 1547]
         field = ["code", "sg_status_list", "tasks"]
         asset_info = self.sg.find("Asset", filters=filter, fields=field)
@@ -236,9 +273,8 @@ class ShotgunApi:
         filter = [["id", "is", shot_id]]
         field = ["description"]
         camera_info = self.sg.find_one("Shot", filters=filter, fields=field)
-        shot_camera_directory = camera_info["description"]
 
-        return shot_camera_directory
+        return camera_info["description"]
 
     def get_undistortion_size(self, shot_id): # 매치무브 팀에서 샷그리드에 pub한 undistortion size를 받아와서 리턴
         # shot_id를 기준으로 undistortion size를 가져온다.
@@ -250,7 +286,7 @@ class ShotgunApi:
 
         return undistortion_height, undistortion_width
 
-    def get_frame_range(self, shot_id): # 샷그리드에서 Frame Range를 받아와서 리턴
+    def get_frame_range_by_shot_id(self, shot_id): # 샷그리드에서 Frame Range를 받아와서 리턴
         # shot_id를 기준으로 frame range를 받아온다.
         filter = [["id", "is", shot_id]]
         field = ["sg_cut_in", "sg_cut_out"]
@@ -260,13 +296,23 @@ class ShotgunApi:
 
         return start_frame, end_frame
     
+<<<<<<< HEAD
+    def get_tasks_info_by_task_id(self, task_id):
+        
+=======
     def get_tasks_info(self, task_id): 
+>>>>>>> main
         tasks_info = self.sg.find("Task", [["id", "is", task_id]], ["task_assignees", "step", "sg_status_list"])
 
         return tasks_info
     
+<<<<<<< HEAD
+    def get_path_info_by_task_id (self, task_id):
+        
+=======
     def get_path_info(self, task_id):
         # task entity에서 sg_description으로 에셋이 publish된 경로와 pub 날짜 가져오기
+>>>>>>> main
         filter = [["id", "is", task_id]]
         field = ["sg_description"]
         path_info = self.sg.find_one("Task", filters=filter, fields=field)
@@ -276,7 +322,7 @@ class ShotgunApi:
 
         return path_info, date_info
     
-    def get_lgt_assgined_assets(self, shot_id):
+    def get_lgt_assgined_assets_by_shot_id(self, shot_id):
          
         filter_ly = [["entity", "is", {"type" : "Shot", "id" : shot_id}], ["step", "is", {"type": "Step", "id": 277}]] # shot_id + ly의 step id
         filter_ani = [["entity", "is", {"type" : "Shot", "id" : shot_id}], ["step", "is", {"type": "Step", "id": 106}]] # shot_id + ani의 step id
@@ -293,12 +339,24 @@ class ShotgunApi:
 
         return ly_asset_info, ani_asset_info, fx_asset_info
 
+<<<<<<< HEAD
+
+    def get_asset_data_by_asset_id (self, asset_id):
+        filter = [["id", "is", asset_id]]
+        fields=["content", "step"]
+        asset_names = self.sg.find("Task", filters=filter, fields=fields)
+        
+        field = ["task_assignees", "sg_status_list", "updated_at"]
+        sg_data = self.sg.find("Task", filters=filter, fields=field)
+        return asset_names, sg_data
+=======
     def get_asset_datas(self, asset_id):
         # 어셋 id로 작업자, status, pub날짜, 에셋 이름, step 찾기
         filter = [["id", "is", asset_id]]
         field = ["task_assignees", "sg_status_list", "updated_at", "content", "step"]
         asset_datas = self.sg.find("Task", filters=filter, fields=field)
         return asset_datas
+>>>>>>> main
 
 
 
@@ -471,3 +529,9 @@ class ShotgunApi:
                 break
         if all_re == True:
             self.sg.update("Asset", shot_id, {"sg_status_list": "re"})
+<<<<<<< HEAD
+
+
+
+=======
+>>>>>>> main

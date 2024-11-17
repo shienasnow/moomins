@@ -7,7 +7,7 @@ import shutil
 class NukeApi:
     def __init__(self):
         pass
-    
+
     @staticmethod
     def check_read_node_connection(node_name):
         
@@ -29,10 +29,10 @@ class NukeApi:
             raise nuke.message(f"ReadNode is None")
         
         while current_node is not None:
-            # 현재 노드의 클래스가 Read인지 확인합니다
+            # Current node Class is Read
             if current_node.Class() == "Read":
                 return True
-            # 다음 노드로 이동합니다 (상위 노드로)
+            # Move Next node
             current_node = current_node.input(0)
         
         return False
@@ -98,6 +98,18 @@ class NukeApi:
 
         return jpg_file_path
 
+<<<<<<< HEAD
+    def get_selected_nodes(self):
+        selected_nodes = nuke.selectedNodes()
+        if not selected_nodes:
+            return nuke.message("Select Node!")
+        return selected_nodes
+
+
+    def get_node_class(self,node):
+        return node.Class()
+
+=======
     def selected_nodes(self):
         '''
         check selected nodes or Node Type is Write Node
@@ -114,12 +126,16 @@ class NukeApi:
                     return None
         return selected_nodes
 
+>>>>>>> main
     def set_image_path(self, node_name, file_path):
         node = nuke.toNode(node_name)
         node["file"].setValue(file_path)
 
+<<<<<<< HEAD
+=======
 
 
+>>>>>>> main
     def make_pub_file(self):
         """
         makedir path , if not version folder make version folder too
