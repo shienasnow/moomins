@@ -59,7 +59,7 @@ class NukeUpload(QWidget):
         self.ui.pushButton_upload.clicked.connect(self.sg_mov_upload)
 
 
-    def make_ui_center(self): # UI를 화면 중앙에 배치
+    def make_ui_center(self):
         qr = self.frameGeometry()
         cp = QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
@@ -81,7 +81,10 @@ class NukeUpload(QWidget):
 
 
         
-    def show_ui(self,node_name): # 위에 과정을 다 거치면 ui를 띄우기
+    def show_ui(self,node_name):
+        '''
+        if check the node type,size etc ... this function used
+        '''
         self.ui_file.open(QFile.ReadOnly)
         loader = QUiLoader()
         self.ui = loader.load(self.ui_file, self)
@@ -127,17 +130,14 @@ class NukeUpload(QWidget):
 
     def make_mov_use_ffmpeg(self,render_file_path,start_frame,end_frame):
         """
-        jpg로 렌더한 파일들을 ffmpeg을 이용해 slate를 넣은
-        mov로 변환시키는 함수.
+        if you render jpg, this function uses ffmpeg convert jpg to mov
         """
         split_path = render_file_path.split("/")
-        project = split_path[4]                               # Moomins
-        task = split_path[8]                              # cmp
-        # /home/rapa/wib/Moomins/seq/BRK/BRK_0010/cmp/wib/images/v001
+        project = split_path[4]
+        task = split_path[8]
         mov_file_path = render_file_path.replace(".%04d.jpg",".mov")
 
         mov_file_name = os.path.basename(mov_file_path)
-        # /home/rapa/wib/Moomins/seq/BRK/BRK_0010/cmp/wib/images/v001/BRK_0010_v001_w001.mov
         artist_name = self.sg_api.get_name_by_id(user_id=self.user_id)
         frame_range = f"{start_frame}-{end_frame}"
         frame_data = f"%{{n}}/{frame_range}:start_number={start_frame}"
@@ -169,7 +169,6 @@ class NukeUpload(QWidget):
             "-y"
         ]
 
-        # 리스트를 공백으로 구분하여 결합
         command = " ".join(command_list)
         process = subprocess.Popen(command, 
                                stdout=subprocess.PIPE,
@@ -179,15 +178,10 @@ class NukeUpload(QWidget):
                                )
         self.mov_file_path = mov_file_path
         nuke.message("Render Complete")
-
         self.make_table_widget_result(mov_file_path)
-
         # delete image option
         # self.delete_jpg_file(mov_file_path)
 
-
-
-        
     def delete_jpg_file(self,mov_file_path):
         """
         This function delete jpg files.(remain thumnail image)
@@ -214,7 +208,6 @@ class NukeUpload(QWidget):
         if not result_image_path:
             return
         self.thumbnail_path = result_image_path
-        
         self.make_mov_table(mov_file_path)
 
     def double_click_result_table_widget(self):
@@ -228,7 +221,6 @@ class NukeUpload(QWidget):
 
     def make_mov_table(self,mov_path):
         self.table.setEnabled(True)
-        # /home/rapa/wib/Moomins/seq/BRK/BRK_0010/cmp/wib/images/v001/BRK_0010_v001_w001.mov
         container_widget = QWidget()
         grid_layout = QGridLayout()
         container_widget.setLayout(grid_layout)
@@ -236,15 +228,13 @@ class NukeUpload(QWidget):
 
         file_name = os.path.basename(mov_path)
         label_path = QLabel()
-        # label_path.setText(f"File name : {file_name}")
-        label_path.setText(file_name)        
+        label_path.setText(file_name)
         label_path.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         label_path.setObjectName("path")
         label_path.setStyleSheet("font-size: 10px;")
         label_path.setFixedWidth(470)
         
         
-        # grid_layout.addWidget(label_icon_image, 0, 0)
         grid_layout.addWidget(label_path, 0, 1)
         grid_layout.setColumnStretch(1, 1)
         grid_layout.setRowStretch(0, 1)
@@ -253,11 +243,11 @@ class NukeUpload(QWidget):
 
 # Backend : 업로드 버튼 누르면 샷그리드에 썸네일과 mov, comment 올리고, status 업데이트
     def sg_status_update(self):
-        current_file_path = nuke.scriptName() # /home/rapa2/wip/Moomins/seq/AFT/AFT_0010/cmp/wip/scenes/v001/AFT_0010_cmp_v001.nknc
-        shot_num = current_file_path.split("/")[7] # AFT_0010
-        task = current_file_path.split("/")[8] # cmp
+        current_file_path = nuke.scriptName()
+        shot_num = current_file_path.split("/")[7]
+        task = current_file_path.split("/")[8]
 
-        self.sg_cls.sg_status_update_nuke_upload(shot_num, task)
+        self.sg_api.sg_status_update_nuke_upload(shot_num, task)
 
     def sg_thumbnail_upload(self): # task id에 맞는 이미지 필드에 썸네일 jpg 업로드
         capture_path = self.thumbnail_path
@@ -267,7 +257,7 @@ class NukeUpload(QWidget):
         task = current_file_path.split("/")[8] # cmp
         task_id = self.sg_cls.sg_status_update_nuke_upload(shot_num, task)
 
-        self.sg_cls.sg_thumbnail_upload_nuke_upload(capture_path, task_id)
+        self.sg_api.sg_thumbnail_upload_nuke_upload(capture_path, task_id)
 
     def sg_mov_upload(self):
         current_file_path = nuke.scriptName()
@@ -284,7 +274,7 @@ class NukeUpload(QWidget):
 
         mov_full_path = self.mov_file_path
 
-        self.sg_cls.sg_mov_upload_nuke_upload(project, comment, mov_full_path, version, task_id)
+        self.sg_api.sg_mov_upload_nuke_upload(project, comment, mov_full_path, version, task_id)
 
 
 

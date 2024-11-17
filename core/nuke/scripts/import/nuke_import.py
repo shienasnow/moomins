@@ -255,7 +255,6 @@ class NukeImport(QWidget):
         label_lgt_status.setPixmap(scaled_pixmap)
         label_lgt_status.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         label_lgt_status.setFixedSize(50, 30)
-        # status에 따라서 아이콘으로 변경 필요
 
         label_lgt_artist = QLabel()
         label_lgt_artist.setObjectName("label_lgt_artist")
@@ -425,12 +424,3 @@ if __name__ == "__main__":
     win = NukeImport()
     win.show()
     app.exec()
-    
-    
-# icon color white
-# Project res => v
-# frame range => 
-# un size
-# Due date
-# 뭐 넣으면 좋을까
-# Slate에 데이터넣는 api 있으면 좋을거같음.(ffmpeg)

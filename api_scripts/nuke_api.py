@@ -8,34 +8,6 @@ class NukeApi:
     def __init__(self):
         pass
 
-    @staticmethod
-    def check_read_node_connection(node_name):
-        
-        """
-        checking connected node in "Read"type
-        
-        input type = str
-        
-        output = Bool
-        
-        Have Read Type return True
-
-        Have not Read Type return False
-        """
-        
-        current_node = nuke.toNode(node_name)
-    
-        if current_node is None:
-            raise nuke.message(f"ReadNode is None")
-        
-        while current_node is not None:
-            # Current node Class is Read
-            if current_node.Class() == "Read":
-                return True
-            # Move Next node
-            current_node = current_node.input(0)
-        
-        return False
     @property
     def nuke_path(self):
         return nuke.scriptName()
@@ -43,6 +15,35 @@ class NukeApi:
     def pub_path(self):
         _pub_path = self.nuke_path.replace("wib", "wib")
         return _pub_path
+
+    @staticmethod
+    def check_read_node_connection(node_name):
+
+        """
+        checking connected node in "Read"type
+
+        input type = str
+
+        output = Bool
+
+        Have Read Type return True
+
+        Have not Read Type return False
+        """
+
+        current_node = nuke.toNode(node_name)
+
+        if current_node is None:
+            raise nuke.message(f"ReadNode is None")
+
+        while current_node is not None:
+            # Current node Class is Read
+            if current_node.Class() == "Read":
+                return True
+            # Move Next node
+            current_node = current_node.input(0)
+
+        return False
 
     def find_nuke_file(self,data = dict):
         '''
@@ -62,10 +63,6 @@ class NukeApi:
                 else:
                     nuke_file_path = lgt_pub_nuke_file_path
         return nuke_file_path
-
-
-
-
 
     def convert_jpg_to_exr(self, exr_path):
         """
@@ -95,47 +92,21 @@ class NukeApi:
             print(f"Successfully converted {exr_path} to {jpg_file_path}")
         except subprocess.CalledProcessError as e:
             print(f"Failed to convert {exr_path} to {jpg_file_path}: {e}")
-
         return jpg_file_path
 
-<<<<<<< HEAD
     def get_selected_nodes(self):
         selected_nodes = nuke.selectedNodes()
         if not selected_nodes:
             return nuke.message("Select Node!")
         return selected_nodes
 
-
     def get_node_class(self,node):
         return node.Class()
 
-=======
-    def selected_nodes(self):
-        '''
-        check selected nodes or Node Type is Write Node
-        '''
-        selected_nodes = nuke.selectedNodes()
-        if not selected_nodes:
-            nuke.message("Select Node!")
-            return None
-        else:
-            # 선택된 노드가 'Write' 노드인지 확인
-            for node in selected_nodes:
-                if node.Class() != 'Write':
-                    nuke.message("Select Node is not Write type Node!")
-                    return None
-        return selected_nodes
-
->>>>>>> main
     def set_image_path(self, node_name, file_path):
         node = nuke.toNode(node_name)
         node["file"].setValue(file_path)
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> main
     def make_pub_file(self):
         """
         makedir path , if not version folder make version folder too
@@ -153,6 +124,7 @@ class NukeApi:
         pub_path = os.path.join(images_path, pub_file_name)
 
         return pub_path
+
     def shot_pub_func(self, node_name):
         if not node_name:
             return
@@ -188,7 +160,7 @@ class NukeApi:
             if f.lower().endswith('.exr'):
                 image_files.append(f)
 
-        # exr 파일들을 번호를 기준으로 정렬하고 가장 높은 번호의 파일 선택
+        # sorted exr files and get the highest exr number
         image_files.sort(key=self.extract_write_number, reverse=True)
 
         if image_files:
