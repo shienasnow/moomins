@@ -7,11 +7,10 @@ def import_reference_asset(asset_path):
     reference_node = import_reference(asset_path)
     if not reference_node:
         return
-    
+
     return reference_node
     
     # print (f"The asset was successfully imported as a reference {reference_node}")
-
     # assign_shader_to_asset(reference_node)
 
 def assign_shader_to_asset(reference_node, shader_json_file, shader_ma_file):
@@ -133,6 +132,15 @@ def set_render_resolution(undistortion_height, undistortion_width):
     cmds.setAttr("defaultResolution.width", int(undistortion_width))
     cmds.setAttr("defaultResolution.height", int(undistortion_height))
 
+def get_frame_range(self, shot_id): # 샷그리드에서 shot_id 기준으로 Frame Range를 가져오기
+    filter = [["id", "is", shot_id]]
+    field = ["sg_cut_in", "sg_cut_out"]
+    frame_info = self.sg.find_one("Shot", filters=filter, fields=field)
+    start_frame = frame_info["sg_cut_in"] # 1
+    end_frame = frame_info["sg_cut_out"] # 25
+
+    return start_frame, end_frame
+
 def set_frame_range(start_frame, end_frame):
     # 타임 슬라이더의 시작 및 종료 프레임 설정
     cmds.playbackOptions(min=start_frame, max=end_frame)
@@ -146,3 +154,21 @@ def get_current_file_directory():
     print(f"현재 마야 파일 경로 : {current_file_path}")
     # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001/AFT_0010_v001_w001.mb
     return current_file_path
+
+def import_shader(shader_ma_path, shader_json_path):
+
+    # maya name space 설정
+    name_space = os.path.basename(shader_ma_path).split(".")[0]
+    cmds.file(shader_ma_path, i=True, namespace=name_space)
+
+    # json 파일 로드
+    with open(shader_json_path, "r") as f:
+        shader_dict = json.load(f)
+
+    # shadere dictionary 정보대로 shader에 오브젝트 붙이기
+    for shader, objects in shader_dict.items():
+        name_space_shader = f"{name_space}:{shader}"
+        cmds.select(clear=True)
+        for oject in objects:
+            cmds.select(object, add=True)
+        cmds.hyperShade(assign=name_space_shader)

@@ -23,11 +23,10 @@ except:
     from PySide2.QtUiTools import QUiLoader
     from PySide2.QtGui import QPixmap
     from PySide2.QtCore import QFile, Qt, Signal
-from api_scripts.shotgun_api import ShotgunApi # shotgrid 모듈
-import api_scripts.asset_import_modules as maya # maya 모듈
+from moomins.api_scripts.sg_api import ShotgunApi
+import moomins.api_scripts.maya_api as maya_api # maya 모듈
 
-reload(maya)
-
+reload(maya_api)
 
 
 class Import(QWidget):
@@ -36,16 +35,16 @@ class Import(QWidget):
         super().__init__()
 
         self.user_id = user_id
-    
-        self.sg_cls = ShotgunApi()
-        self.sg_cls.get_datas_by_id(self.user_id)
+
+        self.sg_api = ShotgunApi
+        self.sg_api.get_datas_by_user_id(self.user_id)
         self.get_user_id() # Loader를 통해서 마야를 실행했을 때 터미널에 있는 user_id를 받아서 user_name을 찾는다
 
         self.make_ui()
         self.event_func() # 이벤트 함수 모음
 
         self.get_shot_info_from_current_directory() # 현재 작업 파일 경로에서 데이터 추출
-        self.current_dict = maya.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
+        self.current_dict = maya_api.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
         self.classify_task() # task 별로 다른 함수를 실행할 수 있도록 classyfy_task 함수에 task 전달
         self.compare_assets()
 
@@ -70,13 +69,13 @@ class Import(QWidget):
 
     def get_user_name(self): # self.user_name
         # user_id로 user_name 찾는 모듈 사용
-        user_datas = self.sg_cls.get_datas_by_user_id(self.user_id)
+        user_datas = self.sg_api.get_datas_by_user_id(self.user_id)
         user_name = user_datas["name"]
         self.user_name = user_name
 
     def get_shot_info_from_current_directory(self): # project, seq_name, seq_num, task, version, shot_id 추출
 
-        current_file_path = maya.get_current_file_directory()
+        current_file_path = maya_api.get_current_file_directory()
         self.project = current_file_path.split("/")[4] # Moomins
         seq_name = current_file_path.split("/")[6] # AFT
         self.seq_num = current_file_path.split("/")[7] # AFT_0010
@@ -87,7 +86,7 @@ class Import(QWidget):
         self.ui.label_sqnum.setText(self.seq_num)
         self.ui.label_task.setText(self.task)
 
-        self.shot_id = self.sg_cls.get_shot_id(self.seq_num)
+        self.shot_id = self.sg_api.get_shot_id(self.seq_num)
         print(f"현재 작업 샷 넘버 : {self.seq_num} (id : {self.shot_id})")
 
 
@@ -119,7 +118,7 @@ class Import(QWidget):
 
 # Layout : shot number에 태그된 asset들(mod.mb 또는 rig.mb)의 정보 찾기
     def get_ly_assigned_assets(self): # shot에 태그된 asset id들을 가져와서 list로 만들어서 다음 함수에 넘긴다
-        assets_of_seq = self.sg_cls.get_assets_of_seq(self.seq_num)
+        assets_of_seq = self.sg_api.get_assets_of_seq(self.seq_num)
         asset_list = assets_of_seq["assets"]
         # print(asset_list)
         # [{'id': 1546, 'name': 'bat', 'type': 'Asset'},
@@ -152,7 +151,7 @@ class Import(QWidget):
         for asset_id in asset_id_list:
             # print (asset_id)
             # [1546, 1479, 1547]
-            asset_info = self.sg_cls.get_asset_info(asset_id)
+            asset_info = self.sg_api.get_asset_info(asset_id)
 
             asset_info = asset_info[0]
             asset_name = asset_info["code"] # joker
@@ -166,7 +165,7 @@ class Import(QWidget):
             for task_id in task_ids:
                 # tasks_info = self.sg.find("Task", [["id", "is", task_id]], ["task_assignees", "step", "sg_status_list"])
 
-                tasks_info = self.sg_cls.get_tasks_info(task_id)
+                tasks_info = self.sg_api.get_tasks_info(task_id)
                 task_info = tasks_info[0]
 
                 artist_list = task_info["task_assignees"]
@@ -182,7 +181,7 @@ class Import(QWidget):
 
 
                 # 파일 경로, 펍 날짜
-                path_info, date_info = self.sg_cls.get_path_info(task_id)
+                path_info, date_info = self.sg_api.get_path_info(task_id)
 
                 path_description = str(path_info["sg_description"]) # 펍된 파일 경로
                 pub_file_name = os.path.basename(path_description) # BRK_0010_v001.mb
@@ -220,7 +219,7 @@ class Import(QWidget):
 
 # Animation, Lighting : 같은 shot number에 해당되는 ly, ani, fx의 정보들 찾기
     def get_lgt_assgined_assets(self): # task id에 해당되는 ly, ani, fx의 abc 파일 경로를 찾습니다
-        ly_asset_info, ani_asset_info, fx_asset_info = self.sg_cls.get_lgt_assgined_assets(self.shot_id)
+        ly_asset_info, ani_asset_info, fx_asset_info = self.sg_api.get_lgt_assgined_assets(self.shot_id)
 
         ly_asset_id = ly_asset_info["id"] # 6328
         ani_asset_id = ani_asset_info["id"] # 6326
@@ -252,7 +251,7 @@ class Import(QWidget):
 
         # ly, ani, fx 에셋들을 그 다음 섹션에 추가
         for asset_id, asset_directory in shot_asset_dict.items():
-            asset_datas = self.sg_cls.get_asset_datas(asset_id)
+            asset_datas = self.sg_api.get_asset_datas(asset_id)
             asset_data = asset_datas[0]
 
             artist_data_list= asset_data["task_assignees"]
@@ -375,7 +374,7 @@ class Import(QWidget):
 # rendercam에 링크된 마지막 Task의 카메라 정보를 담은 dictionary 리턴
     def get_linked_cam_link_info(self):
 
-        shot_camera_directory = self.sg_cls.get_link_camera_directory(self.shot_id)
+        shot_camera_directory = self.sg_api.get_link_camera_directory(self.shot_id)
         # /home/rapa/pub/Moomins/seq/AFT/AFT_0010/rendercam/AFT_0010_cam.abc
 
         if not os.path.islink(shot_camera_directory):
@@ -409,18 +408,14 @@ class Import(QWidget):
         self.ui.tableWidget.setColumnCount(1)
 
         container_widget = QWidget()
-
-        h_layout = QHBoxLayout()
-        grid_layout = QGridLayout()
-
-        # 체크박스 생성해서 h_ly에 넣기
         checkbox_layout = QVBoxLayout()
+
+        # 체크박스 생성해서 checkbox_layout에 넣기
         self.checkbox = QCheckBox()
         self.checkbox.setObjectName("checkbox_import_asset")
-        self.checkbox.setChecked(True)
+        self.checkbox.setChecked(True) # 기본적으로 import하지 않은 에셋은 체크박스 체크되어 있는 상태로
         self.checkbox.setFixedWidth(20)
 
-        # h_layout.addWidget(self.checkbox) # 왼쪽에 체크박스 추가
         checkbox_layout.addWidget(self.checkbox)
 
         # 사용할 ini 파일 선택
@@ -431,10 +426,13 @@ class Import(QWidget):
         elif self.task == "lgt":
             ini = self.asset_ini_for_lgt
 
+
         ### grid layout 생성해서 h_ly에 넣기
+
         assetname_artist_layout = QVBoxLayout()
         assetname_artist_layout.setAlignment(Qt.AlignVCenter)
-        # asset name
+
+        #  asset name
         label_asset_name = QLabel()
         label_asset_name.setObjectName("label_asset_name")
         label_asset_name.setText(section)
@@ -445,7 +443,7 @@ class Import(QWidget):
         # asset artist
         label_asset_artist = QLabel()
         label_asset_artist.setObjectName("label_asset_artist")
-        if ini[section]["asset artist"]:
+        if ini[section]["asset artist"]: # 가장 마지막 task의 작업자
             label_asset_artist.setText(ini[section]["asset artist"])
         label_asset_artist.setAlignment(Qt.AlignLeft)
         label_asset_artist.setStyleSheet("font-size: 10px;")
@@ -454,19 +452,20 @@ class Import(QWidget):
         assetname_artist_layout.addWidget(label_asset_name)
         assetname_artist_layout.addWidget(label_asset_artist)
 
-        asset_pub_date_layout = QHBoxLayout()
         # asset pub date
+        asset_pub_date_layout = QHBoxLayout()
+
         label_asset_date = QLabel()
         label_asset_date.setObjectName("label_asset_date")
         label_asset_date.setText(ini[section]["asset pub date"])
         label_asset_date.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         label_asset_date.setStyleSheet("font-size: 10px;")
-        # label_asset_date.setFixedSize(50, 30)
-
+        label_asset_date.setFixedSize(50, 30)
         asset_pub_date_layout.addWidget(label_asset_date)
 
-        asset_version_task_layout = QHBoxLayout()
         # asset version
+        asset_version_task_layout = QHBoxLayout()
+
         label_asset_version = QLabel()
         label_asset_version.setObjectName("label_asset_version")
         label_asset_version.setText(ini[section]["asset version"])
@@ -505,10 +504,10 @@ class Import(QWidget):
         label_asset_status.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         label_asset_status.setFixedSize(50, 30)
 
+        # asset fileext
         asset_status_fileext_layout = QVBoxLayout()
         asset_status_fileext_layout.setAlignment(Qt.AlignVCenter)
 
-        # asset fileext
         label_asset_fileext = QLabel()
         label_asset_fileext.setObjectName("label_asset_fileext")
         label_asset_fileext.setText(ini[section]["asset file ext"])
@@ -518,8 +517,9 @@ class Import(QWidget):
         asset_status_fileext_layout.addWidget(label_asset_status)
         asset_status_fileext_layout.addWidget(label_asset_fileext)
 
-        asset_pub_directory_layout = QHBoxLayout()
         # asset pub directory
+        asset_pub_directory_layout = QHBoxLayout()
+
         label_asset_pub_directory = QLabel()
         label_asset_pub_directory.setObjectName("label_asset_pub_directory")
         label_asset_pub_directory.setText(ini[section]["asset pub directory"])
@@ -531,32 +531,32 @@ class Import(QWidget):
         pushButton_update = QPushButton("")
         pushButton_update.setMinimumWidth(45)
         pushButton_update.setMaximumWidth(45)
-        # h_layout.addWidget(pushButton_update)
+        pushButton_update.setText("Update") # 버튼에 텍스트 넣기
         update_layout.addWidget(pushButton_update)
-        current_asset_list = self.compare_assets()
-        ref_node, current_version = self.get_version(section)
+        
+        current_asset_list = self.compare_assets() # 현재 씬에 import된 에셋의 이름
+        ref_node, current_version = self.get_version(section) # 현재 씬에 import 된 에셋의 버전
 
+        # 에셋 버전 비교
         if section in current_asset_list: # Import 했으면 (Outliner에 있으면)
-            pushButton_update.setText("Update") # 버튼에 텍스트 넣기
             pushButton_update.setEnabled(False) # 버튼 비활성화
             self.checkbox.setChecked(False)     # 체크 해제
 
-            print("******************버전 비교 테스트***********************")
+            print("*"*20, "버전 비교")
             print(ini[section]["asset version"]) # AFT_0010_v001_w001.mb
             print(current_version) # v001
 
             if not ini[section]["asset version"] == current_version: # Import 이후 업데이트 되었으면
-                # ini에 있는 경로(샷그리드에서 임포터 켤 때 sg에서 불러온 가장 최신 경로)랑
-                # 딕셔너리에 내가 담아놨던 이미 임포트한 에셋의 version 비교
-                pushButton_update.setEnabled(True)
+                # ini에 있는 경로(샷그리드에서 임포터 켤 때 sg에서 불러온 가장 최신 경로)와
+                # 딕셔너리에 내가 담아놨던 이미 임포트한 에셋의 version이 같을 때
+                pushButton_update.setEnabled(True) # 버튼 활성화
 
         else: # import 안했으면
-            pushButton_update.setEnabled(False)
-            pushButton_update.setStyleSheet("QPushButton { background-color: transparent; border: none; }") # Update 버튼 안보임
+            pushButton_update.setEnabled(False) # 버튼 비활성화
+            pushButton_update.setStyleSheet("QPushButton { background-color: transparent; border: none; }") # Update 버튼 보이지 않도록 투명하게 숨기기
 
         new_path = ini[section]["asset pub directory"]
-        # pushButton_update.clicked.connect(partial(asset_import_modules.update_reference_file_path(ref_node, new_path)))
-        pushButton_update.clicked.connect(lambda: asset_import_modules.update_reference_file_path(ref_node, new_path, pushButton_update))
+        pushButton_update.clicked.connect(lambda: maya_api.update_reference_file_path(ref_node, new_path, pushButton_update))
 
         # 컨테이너 위젯에 h_ly 설정
         layout = QHBoxLayout()
@@ -572,19 +572,16 @@ class Import(QWidget):
         container_widget.setLayout(layout)
         self.ui.tableWidget.setCellWidget(row_idx, 0, container_widget) # 테이블 위젯의 row_idx 행과 0열에 container_widget을 삽입
 
-        # 체크 박스 상태 변경 시 listWidget에 들어가는 아이템 변경
-        # self.checkbox.toggled.connect(self.get_checked_row)
 
 
-
-# 현재 씬에 Reference로 있는 에셋 경로를 반환
+# 현재 씬에 Reference로 import 되어있는 에셋 경로를 반환
     def get_version(self, asset_name):
         for k, v in self.current_dict.items():
             if v["asset_name"] == asset_name:
                 return k, v["version"]
         return None, None
 
-# 현재 씬에 Reference로 있는 에셋 이름을 리스트로 반환
+# 현재 씬에 Reference로 import 되어 있는 에셋 이름을 리스트로 반환
     def compare_assets(self):
         # print(current_dict)
         # {'bat_v001_w001RN': {'asset_name': 'bat', 'reference_file_path': '/home/rapa/pub/Moomins/asset/character/bat/rig/pub/scenes/v001/bat_v001_w001.mb'},
@@ -596,13 +593,16 @@ class Import(QWidget):
             asset_name_list = self.asset_ini_for_ani.sections()
         elif self.task == "lgt":
             asset_name_list = self.asset_ini_for_lgt.sections()
-        # print(asset_name_list) # ['bat', 'car', 'joker', 'rock'] # 불러와야 되는 친구들
+        
+        # import할 에셋들
+        # print(asset_name_list) # ['bat', 'car', 'joker', 'rock']
 
+        # import한 에셋들
         current_asset_list = []
         for k, v in self.current_dict.items(): # 현재 씬에 reference로 불러온 에셋 이름, 경로를 담은 딕셔너리
             asset_name_in_scene = v["asset_name"]
 
-            # 불러와야 되는 친구들 중에서 현재 씬에 있는 에셋 이름만 포함한 current_asset_list를 만든다.
+            # import할 에셋들 중 현재 씬에 import한 에셋 이름만 포함
             if asset_name_in_scene in asset_name_list:
                 current_asset_list.append(asset_name_in_scene)
 
@@ -611,18 +611,18 @@ class Import(QWidget):
 
 
 # Thumbnail (아직 없을 때는 no thumbnail)
-    def selected_asset_thumbnail(self): # 선택한 에셋의 썸네일 경로를 추출해서 보여줌
+    def selected_asset_thumbnail(self): # 선택한 에셋의 썸네일(캡처 이미지) 경로를 추출해서 보여줌
         indexes = self.ui.tableWidget.selectedIndexes() # 다중 선택이 되기 때문에 Indexes
 
         for index in indexes:
-            # asset이 pub된 경로를 찾아서 썸네일 이미지 경로로 바꾸기 위해서 폴더 경로 str replace!
+            # asset이 pub된 directory를 썸네일 이미지가 있는 directory로 바꾸기
             widget = self.ui.tableWidget.cellWidget(index.row(), 0)   # 테이블 위젯의 index.row()행과 0번째 열에 있는 셀의 위젯
-            a = widget.findChild(QLabel, "label_asset_pub_directory") # 에셋 ini에서 label_asset_pub_directory인 QLabel
-            original_path = a.text()                                  # 의 text를 찾는다
+            a = widget.findChild(QLabel, "label_asset_pub_directory") # 에셋 ini에서 label_asset_pub_directory인 QLabel의 text
+            original_path = a.text()
 
             # pub된 파일의 경로를 샷 업로더 캡처 경로와 같게 바꾸기 (여러 개일 수 있어서 가장 마지막 w버전 사용)
             if self.task == "ly":
-                # 에셋 업로더의 캡처 경로 : /home/rapa/wip/Moomins/asset/character/jane/mod/wip/images/v002/jane_v002_w001.jpg
+                # 에셋 업로더의 캡처 이미지 경로 : /home/rapa/wip/Moomins/asset/character/jane/mod/wip/images/v002/jane_v002_w001.jpg
                 folder_path = original_path.replace("scenes", "images").replace(".mb", ".jpg").replace("pub", "wip")
                 directory_path = os.path.dirname(folder_path)
                 image_path_list  = glob(os.path.join(directory_path, "*.jpg"))
@@ -635,10 +635,10 @@ class Import(QWidget):
                     self.image_path = sorted(image_path_list)[-1]
 
             elif self.task in ["ani", "lgt"]:
-                # 샷 업로더 캡처 경로  : /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/images/v001/AFT_0010_v001_w001.jpg
+                # 샷 업로더 캡처 이미지 경로  : /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/images/v001/AFT_0010_v001_w001.jpg
                 folder_path = original_path.replace("cache", "images").replace(".abc", ".jpg").replace("pub", "wip")
                 directory_path = os.path.dirname(folder_path)
-                image_path_list = glob(os.path.join(directory_path, "*.jpg"))
+                image_path_list = glob(os.path.join(directory_path, "*.jpg"))   
                 print(f"썸네일 이미지 경로 : {image_path_list}")
 
                 if len(image_path_list) == 0:
@@ -660,25 +660,19 @@ class Import(QWidget):
 
 
 
-# Asset Import (Import 버튼 누르면 선택된 list에 있는 에셋과 그 shader를 Import)
-    def get_checked_row(self): # 체크된 row들을 리스트로 가져옵니다
+# Asset Import
+# Import 버튼 누르면 선택된 list에 있는 에셋, shader Import
+    def get_checked_row(self): # 체크된 row들을 리스트로 가져옴
         checked_row_list = []
         row_count = self.ui.tableWidget.rowCount()
-        
+
         for row in range(row_count):
             container = self.ui.tableWidget.cellWidget(row, 0)
-            
-            """
-            컨테이너에 있는 위젯을 검색할때는 findChild <-- 를 사용하면 쉽게 해당 위젯을 찾을수 있어요!
-            대신 이것을 사용하려면 위젯을 만들때 objectName을 설정해주어야해요
-            ex) 
-            checkbox = QCheckBox()
-            checkbox.setObjectName("checkbox_import_asset")
-            """
-            checkbox = container.findChild(QCheckBox, "checkbox_import_asset")
+            checkbox = container.findChild(QCheckBox, "checkbox_import_asset") # 컨테이너에 있는 위젯 찾기
+
             if checkbox.isChecked():
                 checked_row_list.append(row)
-        # print(checked_row_list)
+
         self.get_selected_asset_list(checked_row_list)
 
     def get_selected_asset_list(self, checked_row_list): # 체크된 row의 에셋 경로들을 담은 리스트 만들기
@@ -692,48 +686,42 @@ class Import(QWidget):
         selected_list = []
         sections = ini.sections()
         for idx, section in enumerate(sections):
-            # print (idx, section)
+
             if idx in checked_row_list: # 체크된 section만 가져오기
                 selected_item = ini[section]["asset pub directory"]
                 selected_list.append(selected_item)
 
-        # print(f"&*&*&*&*&*&*&*&* selected_list : {selected_list}")
         # 현재 Task가 ani일 때
         # ['/home/rapa/pub/Moomins/seq/AFT/AFT_0010/ly/pub/cache/v001/AFT_0010_ly_cam.abc',
         # '/home/rapa/pub/Moomins/seq/AFT/AFT_0010/ly/pub/cache/v001/AFT_0010_ly_cam.abc']
 
         # 현재 Task가 ly일 때
         # ['/home/rapa/pub/Moomins/seq/AFT/AFT_0010/ly/pub/cache/v001/AFT_0010_ly_cam.abc',
-        # '/home/rapa/pub/Moomins/asset/character/bat/rig/pub/scenes/v002/bat_v002.mb',
-        # 등...
+        # '/home/rapa/pub/Moomins/asset/character/bat/rig/pub/scenes/v002/bat_v002.mb',...이하 생략]
 
-        self.import_assets(selected_list) # 선택한 리스트의 에셋들을 씬에 import
-        # self.get_link_shader_path(selected_list)
+        self.import_assets(selected_list) # 선택한 리스트의 에셋과 쉐이드를 씬에 import
 
     def import_assets(self, selected_list):
         print("선택한 asset들을 현재 scene으로 import 하겠습니다")
 
         for path in selected_list:
-            reference_node = asset_import_modules.import_reference_asset(path)
+            reference_node = maya_api.import_reference_asset(path)
             if not reference_node:
                 print (f"{path} 레퍼런스 임포트에 실패했습니다.")
                 continue
-            
-            self.get_link_shader_path(path, reference_node)
 
+            self.get_link_shader_path(path, reference_node) # 쉐이더 import
 
 # Shader Import
     def get_link_shader_path(self, path, reference_node):
-        print("에셋 별 shader.ma, shader.json이 link된 최종 shader 경로를 가져옵니다.")
-        # /home/rapa/pub/Moomins/asset/character/bat/rig/pub/scenes/v002/bat_v002.mb 이걸 받아서
+        print("각각의 에셋에 대한 shader.ma, shader.json이 link된 최종 shader 경로를 가져옵니다.")
+
+        # /home/rapa/pub/Moomins/asset/character/bat/rig/pub/scenes/v002/bat_v002.mb 마야 파일 경로를 받아서
 
         # /home/rapa/pub/Moomins/asset/prop/knife/lkd/pub/scenes/knife_lkd_shader_link.ma 각각 이렇게 바꾸기
         # /home/rapa/pub/Moomins/asset/prop/knife/lkd/pub/scenes/knife_lkd_json_link.json
 
-        # no_camera_selected_list = selected_list[1:] # 가장 첫번째 원소인 카메라를 제거한 어셋들만 있는 리스트 정의
-
-        # for path in no_camera_selected_list:
-        asset_name = path.split("/")[7] # bat
+        asset_name = path.split("/")[7]
         folder_path = path.replace("rig", "lkd").replace("mod", "lkd").replace("mb", "ma")
         folder_path = os.path.dirname(folder_path)
         folder_path = folder_path.rsplit("/",1)[0]
@@ -741,81 +729,43 @@ class Import(QWidget):
 
         shader_ma_path = folder_path + "/" + file_name
         shader_json_path = shader_ma_path.replace("shader", "json").replace(".ma", ".json")
-        asset_import_modules.assign_shader_to_asset(reference_node, shader_json_path, shader_ma_path)
-
+        maya_api.assign_shader_to_asset(reference_node, shader_json_path, shader_ma_path)
 
     def import_shader(self, shader_ma_path, shader_json_path):
         print("shader가 들어있는 shader.ma 파일과 shader assign 정보가 들어있는 shader.json을 불러와서 오브젝트에 붙이기")
-
-        # maya name space 설정
-        name_space = os.path.basename(shader_ma_path).split(".")[0]
-        cmds.file(shader_ma_path, i=True, namespace=name_space)
-
-        # json 파일 로드
-        with open(shader_json_path, "r") as f:
-            shader_dict = json.load(f)
-
-        # shadere dictionary 정보대로 shader에 오브젝트 붙이기
-        for shader, objects in shader_dict.items():
-            name_space_shader = f"{name_space}:{shader}"
-            cmds.select(clear=True)
-            for oject in objects:
-                cmds.select(object, add=True)
-            cmds.hyperShade(assign=name_space_shader)
-
-
-
-# # Import한 Camera 정보에 따라 현재 씬 세팅
-#     def get_link_camera_directory(self): # shot id 기준으로 rendercam 경로 리턴
-#         filter = [["id", "is", self.shot_id]]
-#         field = ["description"]
-#         camera_info = self.sg.find_one("Shot", filters=filter, fields=field)
-#         shot_camera_directory = camera_info["description"]
-
-#         return shot_camera_directory
-
-    # def get_undistortion_size(self): # 매치무브 팀에서 샷그리드에 pub한 undistortion size를 받아와서 리턴
-    #     # shot_id를 기준으로 undistortion size를 가져온다.
-    #     filter = [["id", "is", self.shot_id]]
-    #     field =["sg_undistortion_height", "sg_undistortion_width"]
-    #     undistortion_info = self.sg.find_one("Shot", filters=filter, fields=field)
-    #     undistortion_height = undistortion_info["sg_undistortion_height"] # 1220
-    #     undistortion_width = undistortion_info["sg_undistortion_width"] # 2040
-
-    #     return undistortion_height, undistortion_width
-
-    # def get_frame_range(self): # 샷그리드에서 Frame Range를 받아와서 리턴
-    #     # shot_id를 기준으로 frame range를 받아온다.
-    #     filter = [["id", "is", self.shot_id]]
-    #     field = ["sg_cut_in", "sg_cut_out"]
-    #     frame_info = self.sg.find_one("Shot", filters=filter, fields=field)
-    #     start_frame = frame_info["sg_cut_in"] # 1
-    #     end_frame = frame_info["sg_cut_out"] # 25
-
-    #     return start_frame, end_frame
+        maya_api.import_shader(shader_ma_path, shader_json_path)
 
     def set_undistortion_size(self): # 현재 씬의 Render setting Image Size 설정
-        print("현재 씬의 Render setting Image Size 설정")
-        undistortion_height, undistortion_width = self.sg_cls.get_undistortion_size(self.shot_id)
-        asset_import_modules.set_render_resolution(undistortion_height, undistortion_width)
+        undistortion_height, undistortion_width = self.sg_api.get_undistortion_size(self.shot_id)
+
+        maya_api.set_render_resolution(undistortion_height, undistortion_width)
 
     def set_frame_range(self): # 현재 씬의 Frame Range 설정
-        print("현재 씬의 Frame Range 설정")
-        start_frame, end_frame = self.sg_cls.get_frame_range(self.shot_id)
-        setting_start_frame = start_frame + 1000
-        setting_end_frame = end_frame + 1000
-        asset_import_modules.set_frame_range(setting_start_frame, setting_end_frame)
+        start_frame, end_frame = self.sg_api.get_frame_range()
+        frame_offsfet = 1000
+        
+        if start_frame <= frame_offsfet:
+            adjusted_start_frame = start_frame + frame_offsfet
+        else:
+            start_frame = adjusted_start_frame
+
+        if end_frame <= frame_offsfet:
+            adjusted_end_frame = end_frame + frame_offsfet
+        else:
+            end_frame = adjusted_end_frame
+
+        maya_api.set_frame_range(adjusted_start_frame, adjusted_end_frame)
 
 
 
 # Refresh
     def refresh_sg(self):
-        print("새로고침 실행. 테이블을 비우고 샷그리드의 정보를 다시 읽어와서 넣어줍니다!")
+        print("새로고침 실행. 테이블을 비우고 샷그리드의 정보를 다시 읽어와서 넣어줍니다.")
 
-        self.ui.tableWidget.clear() # tableWidet의 모든 row를 비운다.
+        self.ui.tableWidget.clear() # tableWidet의 모든 row를 비움
 
-        # 샷건 데이터 다시 불러와서 테이블에 넣어준다.
-        self.current_dict = asset_import_modules.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
+        # sg 데이터 다시 불러와서 테이블에 넣음
+        self.current_dict = maya_api.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
         self.classify_task() # task 별로 다른 함수를 실행할 수 있도록 classyfy_task 함수에 task 전달
 
         self.get_linked_cam_link_info()
