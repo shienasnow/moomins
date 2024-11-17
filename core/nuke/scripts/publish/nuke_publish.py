@@ -43,9 +43,13 @@ class NukePublish(QWidget):
         self.move(qr.topLeft())
 
     def node_info(self):
+<<<<<<< HEAD
         nodes = self.nuke_api.get_selected_nodes()
         if len(nodes) is not 1:
             return
+=======
+        nodes = self.nuke_api.selected_nodes()
+>>>>>>> main
         root_node = nuke.root()
         node = nodes[0]
         node_name = node["name"].value()

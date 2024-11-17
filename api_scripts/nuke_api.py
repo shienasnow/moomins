@@ -98,6 +98,7 @@ class NukeApi:
 
         return jpg_file_path
 
+<<<<<<< HEAD
     def get_selected_nodes(self):
         selected_nodes = nuke.selectedNodes()
         if not selected_nodes:
@@ -108,10 +109,33 @@ class NukeApi:
     def get_node_class(self,node):
         return node.Class()
 
+=======
+    def selected_nodes(self):
+        '''
+        check selected nodes or Node Type is Write Node
+        '''
+        selected_nodes = nuke.selectedNodes()
+        if not selected_nodes:
+            nuke.message("Select Node!")
+            return None
+        else:
+            # 선택된 노드가 'Write' 노드인지 확인
+            for node in selected_nodes:
+                if node.Class() != 'Write':
+                    nuke.message("Select Node is not Write type Node!")
+                    return None
+        return selected_nodes
+
+>>>>>>> main
     def set_image_path(self, node_name, file_path):
         node = nuke.toNode(node_name)
         node["file"].setValue(file_path)
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> main
     def make_pub_file(self):
         """
         makedir path , if not version folder make version folder too
