@@ -2,6 +2,15 @@
 
 ![Project Status](https://img.shields.io/badge/status-active-green)
 
+
+### Demo Reels
+[@Moomins Pipeline Team Channel](https://www.youtube.com/@NFXMoomins2024/videos)
+| Asset Pipeline | Lookdev Dept  | [@Video](https://youtu.be/0P0iHkYt0OI?si=HCn1jY91y8nt1T0w)
+| Shot Pipeline  | Layout Dept   | [@Video](https://youtu.be/_bSvw0jTWvc?si=bVcHb_R883TwFA4b)
+| Shot Pipeline  | Lighitng Dept | [@Video](https://youtu.be/WVaZMLCwjKs?si=Hqx80I_eaoCdn7eo)
+| Shot Pipeline  | Comp Dept     | [@Video](https://youtu.be/hPuDBoU4WeQ?si=SOlPmenjOTkBYTxJ)
+
+
 ### Project Overview
 **Project Name**: Moomins API  
 **Development Period**: 2024.08.13 - 2024.09.05  
@@ -36,7 +45,8 @@ In the VFX production environment, artists often face decreased productivity and
 
 ## Development Period
 - **Start Date**: 2024-08-13  
-- **End Date**: 2024-09-05  
+- **End Date**: 2024-09-05
+- **Trimming**: 2024-11
 
 ## Team Members
 | Role   | Name        | GitHub Profile                                
