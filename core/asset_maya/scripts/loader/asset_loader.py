@@ -17,7 +17,6 @@ from PySide6.QtCore import QFile,QEvent,QPoint
 from PySide6.QtCore import Qt,QUrl
 from PySide6.QtGui import QDesktopServices,QPixmap,QGuiApplication
 from datetime import datetime
-sys.path.append("/home/rapa/git/pipeline/api_scripts")
 
 from shotgun_api import ShotgunApi
 
