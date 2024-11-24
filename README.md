@@ -5,7 +5,7 @@
 
 ### Demo Reels
 [@Moomins Pipeline Team Channel](https://www.youtube.com/@NFXMoomins2024/videos)
-| Pipeline   | Step        | GitHub Profile                                
+| Pipeline   | Step        | Video Links                                
 |--------|-------------|---------------------------------------------
 | Asset   | Lookdev Dept      | [@Video](https://youtu.be/0P0iHkYt0OI?si=HCn1jY91y8nt1T0w)
 | Shot    | Kim Dami      | [@Video](https://youtu.be/_bSvw0jTWvc?si=bVcHb_R883TwFA4b)
