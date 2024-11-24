@@ -1,4 +1,4 @@
-# shot loader
+# Maya Shot Loader  (ly, ani, lgt)
 import sys
 import os
 import shutil
@@ -6,7 +6,8 @@ import re
 import webbrowser
 import subprocess
 from pprint import pprint
-# from shotgun_api3 import Shotgun
+from importlib import reload
+
 from PySide6.QtWidgets import QApplication, QWidget, QTreeWidgetItem
 from PySide6.QtWidgets import QLabel, QMenu, QMessageBox
 from PySide6.QtWidgets import QGridLayout
@@ -14,9 +15,10 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtCore import QFile, Qt
 from PySide6.QtGui import QPixmap, QAction,QGuiApplication
 
-sys.path.append("/home/rapa/git/pipeline/api_scripts")
+from moomins.api_scripts.shotgun_api import ShotgunApi
+import moomins.api_scripts.maya_api as maya_api
 
-from shotgun_api import ShotgunApi
+reload(maya_api)
 
 
 class ShotLoader (QWidget): 
@@ -26,23 +28,19 @@ class ShotLoader (QWidget):
         self.user_id = user_id
 
         self.sg_cls = ShotgunApi()
-        # print (user_id)
         self.sg_cls.get_datas_by_id(self.user_id)
 
         self.make_ui()
 
-        # self.connect_id()
         self.get_task_data()
         self.set_treewidget()
         self.make_tablewidget()
-
-        self.events()
-    
+        self.events_func()
         
 
-    def make_ui(self): # ui 만드는 메서드 
+    def make_ui(self):
         """
-        ui 만드는 메서드 
+        Create a UI.
         """
         my_path = os.path.dirname(__file__)
         ui_file_path = my_path + "/shot_loader.ui"
@@ -53,45 +51,45 @@ class ShotLoader (QWidget):
         ui_file.close() 
         self.make_ui_center()
 
-    def make_ui_center(self): # UI를 화면 중앙에 배치
+    def make_ui_center(self):
+        """
+        Place UI in the center of the screen
+        """
         qr = self.frameGeometry()
         cp = QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    def events (self): # 실행 이벤트 모음
-        """ 
-        event 모음
+    def events_func (self):
         """
-        self.tree.itemClicked.connect(self.click_treewiget_event) # 트리위젯 클릭 용
-        self.table.cellPressed.connect(self.get_click_data) # 테이블위젯 클릭 용
-        self.table.setContextMenuPolicy(Qt.CustomContextMenu) # 테이블위젯 우클릭 용
-        self.table.customContextMenuRequested.connect(self.click_right_menu) # 테이블위젯 우클릭 용
-        self.ui.listWidget.itemDoubleClicked.connect(self.double_clicked_item) # 리스트위젯 더블클릭 용
-        self.ui.pushButton.clicked.connect(self.refresh) # refresh 용 버튼
+        Event Collection
+        """
+        self.tree.itemClicked.connect(self.click_treewiget_event) # Tree Widget Click
+        self.table.cellPressed.connect(self.get_click_data) # Table Widget Click
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu) # Table Widget Right-Click
+        self.table.customContextMenuRequested.connect(self.click_right_menu) # Table Widget Right-Click
+        self.ui.listWidget.itemDoubleClicked.connect(self.double_clicked_item) # List Widget Double-Click
+        self.ui.pushButton.clicked.connect(self.refresh) # Refresh Button
      
-    def get_task_data(self): # 할당된 데이터 정보 가져와서 딕셔너리로 정리
+    def get_task_data(self):
         """
-        user data dict으로 재정리
+        Get data from the task and organize it into the dictionary
         """
         self.datas_list = self.sg_cls.get_task_data(self.user_id)
-        # pprint (self.datas_list) # 모든 task 정상적으로 출력됨 ########################################## ok
-
-        # data 정리
         self.projects_data_dict = {}
         
-        for data_dict in self.datas_list: # 리스트 풀기 
-            project_name = data_dict["project"]["name"]                  # 프로젝트 이름 Moomins
-            seq_name_part = data_dict["entity"]["name"].split("_")[0]    # 시퀀스 이름만 나와 있는 부분 AFT
-            seq = data_dict["entity"]["name"]                            # 시퀀스 풀네임 AFT_0010
-            task = data_dict["step"]["name"]                             # 소속 파트 ani
-            start_date = data_dict["start_date"]                         # 시작 날짜 2024-09-03
-            due_date = data_dict["due_date"]                             # 마감 날짜 2024-09-11
-            status = data_dict["sg_status_list"]                         # 작업 상황 wtg
+        for data_dict in self.datas_list:
+            project_name = data_dict["project"]["name"]                  # Project Name (eg. Moomins)
+            seq_name_part = data_dict["entity"]["name"].split("_")[0]    # Sequence Name (eg. AFT)
+            seq = data_dict["entity"]["name"]                            # Sequence Number (eg. AFT_0010)
+            task = data_dict["step"]["name"]                             # Department (eg. ani)
+            start_date = data_dict["start_date"]                         # Start Date (format : YYYY-MM-DD)
+            due_date = data_dict["due_date"]                             # Publish Date (format : YYYY-MM-DD)
+            status = data_dict["sg_status_list"]                         # Status (eg. wip)
 
 
             # for task in task_list:
-            # 버전 정리
+            # Organize versions
             ver_path = f"/home/rapa/wip/{project_name}/seq/{seq_name_part}/{seq}/{task}/wip/scene"
             if not os.path.exists(ver_path):
                 version = "v001"
@@ -103,7 +101,7 @@ class ShotLoader (QWidget):
                     version = sorted(ver_folders)[-1]
             
 
-            # 데이터 딕셔너리로 정리
+            # Organize data into a dictionary
             if project_name not in self.projects_data_dict:
                 self.projects_data_dict[project_name] = {}
 
@@ -116,26 +114,22 @@ class ShotLoader (QWidget):
             self.projects_data_dict[project_name][seq]["status"] = status
             self.projects_data_dict[project_name][seq]["version"] = version
         
-        print("---------------------------------")
         pprint(self.projects_data_dict)
 
-    # treewidget 관련 메서드들
-    def set_treewidget(self): # 트리 위젯에 정보 띄우기
+    # trewidget related methods
+    def set_treewidget(self):
         """
-        treeWidget 에 정보 띄우기 
+        Floating information in tree widgets
         """
         self.tree = self.ui.treeWidget
         self.tree.clear()
-        # self.ui.listWidget.clear()
 
-        # 트리에 띄울 project 와 seq 이름의 알파벳 부분만 딕셔너리에 넣기
+        # Put only the project and seq-named alphabetic parts in the dictionary to be displayed in the tree
         treewiget_project_dict = {}
         for project_name, seq_dict in self.projects_data_dict.items():
-            # print (treewiget_project_dict)
 
             for seq_name in seq_dict.keys():
                 seq_name_parts = seq_name.split("_")[0]
-                # print (seq_name_parts)
                 
                 if project_name not in treewiget_project_dict:
                     treewiget_project_dict[project_name] = []
@@ -143,9 +137,7 @@ class ShotLoader (QWidget):
                 if seq_name_parts not in treewiget_project_dict[project_name]:
                     treewiget_project_dict[project_name].append(seq_name_parts)
 
-            # print (treewiget_project_dict) # {'Marvelous': ['OPN', 'hyo'], 'Moomins': ['STG', 'BRK', 'RST', 'RVL', 'FIN', 'AFT', 'KLL', 'MAD', 'MSK', 'OPN', 'TRS'], 'Test_phoenix': ['OPN', 'END']}
-
-        # 트리 위젯에 추가 
+        # Adding to the Tree Widget
         for project, seq_name_parts in treewiget_project_dict.items():
             project_item = QTreeWidgetItem(self.tree)
             project_item.setText(0, project)
@@ -154,14 +146,14 @@ class ShotLoader (QWidget):
                 seq_item = QTreeWidgetItem(project_item)
                 seq_item.setText(0, seq_name_part)
 
-    def click_treewiget_event(self, item): # 트리 위젯에서 클릭했을 때 매치 되는 데이터 보내기
+    def click_treewiget_event(self, item):
         """
-        treeWidget 을 클릭했을 때 매치되는 데이터 찾기
+        Find the data that matches when clicked in the tree widget
         """
         self.table.clear()
         self.ui.listWidget.clear()
 
-        if item.childCount() > 0: # 프로젝트 ( 부모 )
+        if item.childCount() > 0: # Project (Parenet)
             selected_project = item.text(0)
             for project_name, seq_data_dict in self.projects_data_dict.items():
                 if project_name == selected_project:
@@ -169,7 +161,7 @@ class ShotLoader (QWidget):
                     if matching_project_dict:
                         self.update_table_items(matching_project_dict, None)
 
-        else:                      # 시퀀스 ( 자식 )
+        else: # Sequence (Child)
             matching_seq_dict = {}
             selected_seq_name_parts = item.text(0)
             selected_project = item.parent().text(0)
@@ -184,26 +176,26 @@ class ShotLoader (QWidget):
                                 self.update_table_items(None, matching_seq_dict)
 
 
-    # tablewidget 관련 메서드들
-    def make_tablewidget(self): # 테이블 위젯 기본 세팅
+    # Methods related to tablewidget
+    def make_tablewidget(self):
         """
-        tableWidget 기본 setting
+        Table Widget Default Settings
         """
         self.table = self.ui.tableWidget
         self.table.setColumnCount(1)
         self.table.setColumnWidth(0, 300)
 
 
-    def update_table_items(self, matching_project_dict=None, matching_seq_dict=None): # 테이블위젯에 row 추가
+    def update_table_items(self, matching_project_dict=None, matching_seq_dict=None):
         """
-        data 양에 맞게 tableWidget 에 row 추가
+        Add row to tableWidget to match the number of data
         """
         if matching_project_dict:
             data_dict = matching_project_dict
         elif matching_seq_dict:
             data_dict = matching_seq_dict
         else:
-            return  # 매칭되는 테스크가 없을 때
+            return  # When there is no matching task
         
         self.table.setRowCount(len(data_dict)) 
         row = 0
@@ -212,13 +204,11 @@ class ShotLoader (QWidget):
             # print (row, data_dict, seq_name)
             row += 1
 
-    def make_table_hard_coding(self, row, data_dict, seq_name): # 하드 코딩으로 테이블 만들기
+    def make_table_hard_coding(self, row, data_dict, seq_name):
         """
-        하드 코딩으로 tableWidget 만들기
+        Create tableWidget with hard coding
         """
-        # print (row, data_dict) 0 {'BRK_0010': {'task': 'ani', 'start_date': '2024-08-26', 'due_date': '2024-08-28', 'status': 're', 'version': 'v001'}}
-
-        # 데이터 정리 {'BRK_0010': {'task': 'ani', 'start_date': '2024-08-26', 'due_date': '2024-08-28', 'status': 're', 'version': 'v001'}}
+        # Organize data {'BRK_0010': {'task': 'ani', 'start_date': '2024-08-26', 'due_date': '2024-08-28', 'status': 're', 'version': 'v001'}}
         task = data_dict[seq_name]["task"]
         version = data_dict[seq_name]["version"]
         start_date = data_dict[seq_name]["start_date"]
@@ -226,16 +216,16 @@ class ShotLoader (QWidget):
         date_range = f"{start_date} - {due_date}"
         status = data_dict[seq_name]["status"]
 
-        container_widget = QWidget() # 컨테이너 위젯 생성
-        grid_layout = QGridLayout() # 그리드 레이아웃 생성
-        container_widget.setLayout(grid_layout) # 컨테이너에 레이아웃 설정
+        container_widget = QWidget() # Create a Container Widget
+        grid_layout = QGridLayout() # Create Grid Layout
+        container_widget.setLayout(grid_layout) # Set layout to container
 
-        self.table.setRowHeight(row, 80) # 행 row 의 높이 조절
+        self.table.setRowHeight(row, 80) # Adjusting the height of the row
 
-        self.table.setCellWidget(row, 0, container_widget) # 테이블 위젯에 컨테이너 추가
+        self.table.setCellWidget(row, 0, container_widget) # Add a Container to the Table Widget
         
 
-        # 프로그램 로고 사진 라벨 제작
+        # Logo images by DCC
         label_node_name1 = QLabel()
         if task in ["ly", "ani", "lgt"]:
             image_path = "/home/rapa/git/pipeline/sourceimages/maya.png"
@@ -249,7 +239,7 @@ class ShotLoader (QWidget):
         label_node_name1.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
         label_node_name1.setFixedSize(80, 80)
 
-        # 시퀀스 이름 라벨 제작
+        # Sequence Name
         label_node_name2 = QLabel()
         label_node_name2.setText(seq_name)
         label_node_name2.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
@@ -257,8 +247,7 @@ class ShotLoader (QWidget):
         label_node_name2.setStyleSheet("font-size: 12px;")
         label_node_name2.setFixedSize(80, 20)
 
-        # 버전 이름 라벨 제작
-
+        # Version
         label_node_name3 = QLabel()
         label_node_name3.setText(version)
         label_node_name3.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -266,7 +255,7 @@ class ShotLoader (QWidget):
         label_node_name3.setStyleSheet("font-size: 12px;")
         label_node_name3.setFixedSize(70, 20)    
         
-        # 유저 파트 라벨 제작
+        # User Task
         label_node_name4 = QLabel()
         label_node_name4.setText(task)
         label_node_name4.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
@@ -274,21 +263,14 @@ class ShotLoader (QWidget):
         label_node_name4.setStyleSheet("font-size: 12px;")
         label_node_name4.setFixedSize(80, 20)   
         
-        # 제작 기간 라벨 제작
+        # Publish Date
         label_node_name5 = QLabel()
         label_node_name5.setText(date_range)
         label_node_name5.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         label_node_name5.setStyleSheet("font-size: 12px;")
-        label_node_name5.setFixedSize(145, 20)
+        label_node_name5.setFixedSize(145, 20)       
 
-        # # 작업 상태 라벨 제작
-        # label_node_name6 = QLabel()
-        # label_node_name6.setText(status)
-        # label_node_name6.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        # label_node_name6.setStyleSheet("font-size: 12px;")
-        # label_node_name6.setFixedSize(100, 20)       
-
-        # 작업 상태 라벨 제작
+        # Status labels
         label_node_name6 = QLabel()
         if status == "wtg":
             image_path = "/home/rapa/git/pipeline/sourceimages/wtg.png"
@@ -309,28 +291,27 @@ class ShotLoader (QWidget):
         label_node_name6.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
         label_node_name6.setFixedSize(80, 20)
         
-        # 레이아웃에 라벨 넣기
-        grid_layout.addWidget(label_node_name1, 0, 0) # 프로그램 로고 사진
-        grid_layout.addWidget(label_node_name2, 0, 1) # 시퀀스 이름
-        grid_layout.addWidget(label_node_name3, 0, 2) # 버전 이름
-        grid_layout.addWidget(label_node_name4, 0, 3) # 유저 테스크
-        grid_layout.addWidget(label_node_name5, 1, 1, 1, 2) # 제작 기간
-        grid_layout.addWidget(label_node_name6, 1, 3) # 작업 상태 
+        # Place labels in layout
+        grid_layout.addWidget(label_node_name1, 0, 0) # Logo images by DCC
+        grid_layout.addWidget(label_node_name2, 0, 1) # Sequence Name
+        grid_layout.addWidget(label_node_name3, 0, 2) # Versioin
+        grid_layout.addWidget(label_node_name4, 0, 3) # User Task
+        grid_layout.addWidget(label_node_name5, 1, 1, 1, 2) # Publish Date
+        grid_layout.addWidget(label_node_name6, 1, 3) # Status
 
         
 
-    def get_click_data(self, row,_): # 테이블위젯에서 선택한 row 를 전역변수로 선언해주는 메서드
+    def get_click_data(self, row,_):
         """
-        tableWidet 에서 선택한 row를 self.click_row 로 선언하는 메서드
+        Method to declare the row selected in the table widget as a global variable
         """
-
         self.click_row = row
         self.set_listwidget()
 
-   # listwidget 관련 메서드            
-    def set_listwidget (self): # 리스트 위젯에 wip 파일 띄우기
+# List Widget
+    def set_listwidget (self):
         """
-        listWidget 에 wip 파일 리스트 띄우기 
+        Show work in process files in the list widget.
         """
         self.ui.listWidget.clear()
 
@@ -346,9 +327,9 @@ class ShotLoader (QWidget):
         for wip_file in wip_files:
             self.ui.listWidget.addItem(wip_file)
                     
-    def double_clicked_item(self,item): # 리스트 위젯에서 파일 더블클릭하면 실행하기
+    def double_clicked_item(self,item):
         """
-        listWidget 의 파일을 더블 클릭 하면 파일 실행하기
+        Run by double-clicking a file in the list widget
         """
         _, _, _, version, wip_path, _, _ = self.get_tablewidget_data()
 
@@ -356,12 +337,12 @@ class ShotLoader (QWidget):
         file_path = f"{wip_path}/scenes/{version}/{file_name}"
         print (file_path)
 
-        # 파일이 없을 경우
+        # If no file
         if file_name == "No File":
             self.msg_box("NoFile")
             return
         
-        # 파일 확장명 별로 오픈되는 프로그램 분리
+        # Seperate DCCs running by file extension
         ext = file_name.split(".")[-1]
         if ext == "mb":
             subprocess.Popen(["/bin/bash", "-i", "-c", f'shot_maya {file_path}'],start_new_session=True)
@@ -371,9 +352,9 @@ class ShotLoader (QWidget):
             self.run_nuke_nknc(file_path)
 
 
-    def run_nuke_nknc(self, file_path): # nknc 실행 용 메서드
+    def run_nuke_nknc(self, file_path):
         """
-        nuke non-commercial 용 실행 메서드
+        Method for executing a Nuke (Non-Commercial)
         """
         nuke_path = 'source /home/rapa/git/pipeline/env/nuke.env && /opt/nuke/Nuke15.1v1/Nuke15.1 --nc'
         command = f"{nuke_path} {file_path}" 
@@ -381,10 +362,9 @@ class ShotLoader (QWidget):
 
 
 
-    # 우클릭 관련 메서드들
-    def click_right_menu(self,pos): # 우클릭 띄우기
+    def click_right_menu(self,pos):
         """
-        우클릭을 띄우기 위한 메서드
+        Floating right-click options.
         """
         context_menu = QMenu()
 
@@ -411,22 +391,22 @@ class ShotLoader (QWidget):
 
         context_menu.exec(self.table.mapToGlobal(pos))
 
-    def get_tablewidget_data(self): # 선택한 테이블 위젯의 데이터 가져오기 
+    def get_tablewidget_data(self):
         """
-        tableWidget 에서 사용
+        Get datas from the selected table widget.
         """
 
-        # 테이블 위젯에서 시퀀스 이름 가져오기 
+        # Get sequence name from table widgets.
         widget = self.table.cellWidget(self.click_row, 0)
         if not widget :
             return
         seq_label = widget.findChild(QLabel, "seq_name")
         seq_name_of_table = seq_label.text() 
 
-        # 데이터와 테이블 위젯에서 가져온 시퀀스 이름 매치하기
+        # Match the sequence name taken from the data and table widget.
         for project_name, seq_data_dict in self.projects_data_dict.items():
             selected_tree_item = self.tree.currentItem() 
-            if selected_tree_item.childCount() > 0: # 부모일 경우 
+            if selected_tree_item.childCount() > 0: # in the case of parent.
                 selected_project = selected_tree_item.text(0)
                 if project_name == selected_project:
                     for seq_name, data in seq_data_dict.items():
@@ -443,7 +423,7 @@ class ShotLoader (QWidget):
                         
                         continue
             else:
-                selected_project = selected_tree_item.parent().text(0) # 트리에서 선택한 아이템의 부모 ( 선택한 시퀀스의 프로젝트 이름 )
+                selected_project = selected_tree_item.parent().text(0) # The parent of the selected item in the tree (Project name of the selected sequence)
                 if project_name == selected_project:
                     for seq_name, data in seq_data_dict.items():
                         task = data["task"]
@@ -457,78 +437,63 @@ class ShotLoader (QWidget):
                             ver_path = f"{wip_path}/scenes/{version}"
                             return seq_name, task, status, version, wip_path, pub_path, ver_path
 
-######
-    def make_new_scene(self): # New Scene 눌렀을 때 파트별로 새 씬(w001)이 열리거나 이미 있다면 작업 중이라고 경고 창
+
+    def make_new_scene(self):
+        """
+        When "New Scene", a new scene (w001) is created and opened with the correct dcc for each part,
+        or if it is already there, a warning window says it is working.
+        """
         self.ui.listWidget.clear()
 
         seq_name, task, _, version, wip_path, _, ver_path = self.get_tablewidget_data()
 
-        print("-----------------------------------------")
-        self.sg_cls.sg_shot_task_status_update(seq_name, task) ###### Backend 연결
+        self.sg_cls.sg_shot_task_status_update(seq_name, task) # Shotgrid Backend
 
-        # 폴더 만들기
+        # Create Directory
         folder_list = ["scenes", "sourceimages", "cache", "images"]
         for folder in folder_list:
             os.makedirs(f"{wip_path}/{folder}/{version}", exist_ok=True)
 
-        # 복사할 빈 씬 경로 
+        # Empty scene path to copy
         empth_file_path = os.path.dirname(__file__)
 
-        # 레이아웃, 애니 작업자의 경우, wip 파일 없으면 만들고 실행
+        # For Layout, Animation, Lighting Artist, create if you don't have a wip file and run the file.
         if task in ["ly", "ani", "lgt"]: 
             if not os.path.exists(f"{ver_path}/{seq_name}_{version}_w001.mb"):
-                shutil.copy(os.path.join(empth_file_path, ".emptymaya.mb"), os.path.join(ver_path, ".emptymaya.mb")) # 빈 파일 복사
-                os.rename(f"{ver_path}/.emptymaya.mb", f"{ver_path}/{seq_name}_{version}_w001.mb") # 파일명 지정
-                subprocess.Popen(["/bin/bash", "-i", "-c", f'shot_maya {ver_path}/{seq_name}_{version}_w001.mb'],start_new_session=True) # 파일 실행
+                shutil.copy(os.path.join(empth_file_path, ".emptymaya.mb"), os.path.join(ver_path, ".emptymaya.mb")) # Copy a template file
+                os.rename(f"{ver_path}/.emptymaya.mb", f"{ver_path}/{seq_name}_{version}_w001.mb") # Specify File Name
+                subprocess.Popen(["/bin/bash", "-i", "-c", f'shot_maya {ver_path}/{seq_name}_{version}_w001.mb'],start_new_session=True) # Execute a file
                 return
-            self.msg_box("WipStatusError")
+            self.msg_box("Wip Status Error")
 
-        # # 라이팅 작업자의 경우 wip 파일 없으면 마야가 만들어지고 실행, status 가 pub 일 경우 누크가 뉴씬 되도록 
-        # if task == "lgt":
-        #     if os.path.exists(f"{ver_path}/{seq_name}_{version}_w001.mb"): # 마야 경로가 존재할 경우
-        #         if status == "pub": # 프리컴프 단계에선 누크가 뉴씬 되도록
-        #             shutil.copy(os.path.join(empth_file_path, ".emptynuke.nknc"), os.path.join(ver_path, ".emptynuke.nknc")) # 빈 파일 복사
-        #             os.rename(f"{ver_path}/.emptynuke.nknc", f"{ver_path}/{seq_name}_{version}_w001.nknc") # 파일명 지정
-        #             file_path = f"{ver_path}/{seq_name}_{version}_w001.nknc"
-        #             self.run_nuke_nknc(file_path)
-        #         else: # 마야 작업 중일 경우
-        #             self.msg_box("WipStatusError")
-        #     else: # 마야 뉴씬 할 경우
-        #         os.path.exists(f"{ver_path}/{seq_name}_{version}_w001.mb")
-        #         shutil.copy(os.path.join(empth_file_path, ".emptymaya.mb"), os.path.join(ver_path, ".emptymaya.mb")) # 빈 파일 복사
-        #         os.rename(f"{ver_path}/.emptymaya.mb", f"{ver_path}/{seq_name}_{version}_w001.mb") # 파일명 지정
-        #         subprocess.Popen(["/bin/bash", "-i", "-c", f'shot_maya {ver_path}/{seq_name}_{version}_w001.mb'],start_new_session=True)
-                    
-
-        # 후디니 작업자의 경우, wip 파일 없으면 만들고 실행
+        # For FX Artist, create if you don't have a wip file and run the file.
         elif task == "fx":
             if not os.path.exists(f"{ver_path}/{seq_name}_{version}_w001.hip"):
                 self.msg_box("FX")
                 return
-            self.msg_box("WipStatusError")
+            self.msg_box("Wip Status Error")
 
-        # 누크 작업자의 경우, wip 파일 없으면 만들고 실행
+        # For Comp Artist, create if you don't have a wip file and run the file.
         elif task  in ["prc", "cmp"]:
-            print ("누크 작업자")
             if not os.path.exists(f"{ver_path}/{seq_name}_{version}_w001.nknc"):
-                shutil.copy(os.path.join(empth_file_path, ".emptynuke.nknc"), os.path.join(ver_path, ".emptynuke.nknc")) # 빈 파일 복사
-                os.rename(f"{ver_path}/.emptynuke.nknc", f"{ver_path}/{seq_name}_{version}_w001.nknc") # 파일명 지정
+                shutil.copy(os.path.join(empth_file_path, ".emptynuke.nknc"), os.path.join(ver_path, ".emptynuke.nknc")) # Copy a template file
+                os.rename(f"{ver_path}/.emptynuke.nknc", f"{ver_path}/{seq_name}_{version}_w001.nknc") # Specify File Name
                 file_path = f"{ver_path}/{seq_name}_{version}_w001.nknc"
-                self.run_nuke_nknc(file_path)
+                self.run_nuke_nknc(file_path) # Execute a file
                 return
-            self.msg_box("WipStatusError")
+            self.msg_box("Wip Status Error")
         
         else:
-            print ("작업자 아님")
+            print ("You are not a Artist.")
 
 
         self.set_listwidget()
 
-    def make_new_wip_version(self): # wip 파일 버전 업 / wip 파일이 아예 없다면 경고창 띄우기
+    def make_new_wip_version(self): # Version up the work in process files.
 
         _, task, _, _, _, _, ver_path = self.get_tablewidget_data()
         
-        # 파트별 확장명 정리
+        # Define extension names by step.
         if task in ["ly", "ani", "lgt"]:
             ext = "mb"
         elif task == "fx":
@@ -536,7 +501,7 @@ class ShotLoader (QWidget):
         elif task  in ["prc", "cmp"]:
             ext = "nknc"
 
-        # 경로나 wip 파일 없으면 작업 전 알리는 경고창 띄우기
+        # If you don't have a path or file, raise a message window before you work.
         if not os.path.exists(ver_path):
             self.msg_box("NoFile")
             return
@@ -545,7 +510,7 @@ class ShotLoader (QWidget):
             self.msg_box("NoFile")
             return
         
-        # wip 파일 있으면 마지막 버전에서 버전 업 생성
+        # Create a versioned file if you have a work in process file.
         last_wip_file = sorted(wip_files)[-1]
         
         match = re.search(rf'_w(\d+)\.{ext}', last_wip_file)
@@ -558,28 +523,33 @@ class ShotLoader (QWidget):
 
         self.set_listwidget()
 
-    def open_shotgrid_site(self): # 샷그리드 오픈 메서드
+    def open_shotgrid_site(self): # Open the Shotgird Site.
 
         shotgrid_url = "https://4thacademy.shotgrid.autodesk.com/projects/"
         webbrowser.open(shotgrid_url)
 
-    def open_current_path(self): # 현재 버전의 경로를 열어주는 메서드
-
+    def open_current_path(self):
+        """
+        Method to open the file of current version.
+        """
         _, _, _, _, _, _, ver_path = self.get_tablewidget_data()
 
         if not os.path.exists (ver_path):
-            self.msg_box("NoPath")
+            self.msg_box("No Path")
             return
-        subprocess.call(["xdg-open", ver_path]) # 리눅스 버전
-######
-    def version_up_for_retake(self): # pub 한 파일 retake 받았을 때 wip 에 새로운 ver 폴더와 wip 파일 생성되는 메서드
+        subprocess.call(["xdg-open", ver_path]) # Linux
+
+    def version_up_for_retake(self):
+        """
+        When a published file is retaken, the new ver folder and the method
+        by which the file is created on the wipe server.
+        """
        
         seq_name, task, status, _, wip_path, pub_path, _ = self.get_tablewidget_data()
 
-        print("-----------------------------------------")
-        self.sg_cls.sg_shot_task_status_update(seq_name, task) ###### Backend 연결
+        self.sg_cls.sg_shot_task_status_update(seq_name, task) # Shotgrid Backend
 
-        # 파트별 확장명 정리
+        # Define extension names by step.
         if task in ["ly", "ani", "lgt"]:
             ext = "mb"
         elif task == "fx":
@@ -591,23 +561,23 @@ class ShotLoader (QWidget):
             pub_files = os.listdir(pub_path)
             last_pub_file = sorted(pub_files)[-1]
 
-            # retake 받았을 때 pub 에 있는 파일을 버전을 높이기
+            # Increase the version of the file in pub when retaken.
             match = re.search(rf'_v(\d+)\.{ext}', last_pub_file)
             ver_num = int(match.group(1))
             ver_up_num = ver_num + 1
             new_ver_num = f"v{ver_up_num:03d}"
 
-            # 폴더 경로 만들기 
+            # Create a Path.
             folder_list = ["scenes", "sourceimages", "cache", "images"]
             for folder in folder_list:
                 os.makedirs(f"{wip_path}/{folder}/{new_ver_num}", exist_ok=True)
 
             new_ver_path = f"{wip_path}/scene/{new_ver_num}"
 
-            # wip 폴더에 파일 복사하기
+            # Copy files to the work in process path.
             shutil.copy(os.path.join(pub_path, last_pub_file), os.path.join(new_ver_path, f"{seq_name}_{new_ver_num}_w001.{ext}"))
             
-            # 새로운 wip 파일을 작업자 프로그램 별로 다른 프로그램 오픈
+            # Open new wip files to different programs for each DCCs.
             if task in ["ly", "ani", "lgt"]:
                 subprocess.Popen(["/bin/bash", "-i", "-c", f'shot_maya {new_ver_path}/{seq_name}_{new_ver_num}_w001.mb'],start_new_session=True)
             elif task == "fx":
@@ -622,35 +592,34 @@ class ShotLoader (QWidget):
         self.set_listwidget()
 
 
-    def refresh(self): # data 를 다시 가져오는 메서드 ( 새로고침 )
+    def refresh(self):
         self.clear_ui()
         self.reload_data()
 
-    def clear_ui(self): # refresh 때 ui 비우는 메서드
+    def clear_ui(self): # Empty the ui, when refreshed.
         self.tree.clear()
         self.table.clear()
         self.table.setRowCount(0)
         self.ui.listWidget.clear()
 
-    def reload_data(self): # refresh 때 다시 데이터를 가져오는 메서드
+    def reload_data(self): # Reloads the data, when refreshed.
         self.get_task_data()
         self.set_treewidget()
     
 
-    # qkrwntjr1@#
-    # 에러 메세지
-    def msg_box(self, message_type): # 에러 메세지 띄우는 함수..
+    # Raise Error Message
+    def msg_box(self, message_type):
     
         if message_type == "WipStatusError":
-            QMessageBox.critical(self, "Error", "이미 작업 중입니다.", QMessageBox.Yes)
+            QMessageBox.critical(self, "Error", "You are already working on it.", QMessageBox.Yes)
         if message_type == "StatusError":
-            QMessageBox.critical(self, "Error", "Retake 상태가 아닙니다. Status를 확인해주세요.", QMessageBox.Yes)
+            QMessageBox.critical(self, "Error", "It is not in the 'Retake' state, please check the status.", QMessageBox.Yes)
         if message_type == "NoFile":
-            QMessageBox.critical(self, "Error", "파일이 없습니다.", QMessageBox.Yes)
+            QMessageBox.critical(self, "Error", "File Not Found", QMessageBox.Yes)
         if message_type == "NoPath":
-            QMessageBox.critical(self, "Error", "경로가 생성 되지 않았습니다. New Scene 먼저 해주세요", QMessageBox.Yes)
+            QMessageBox.critical(self, "Error", "Path has not been created. Please do 'New Scene' first.", QMessageBox.Yes)
         if message_type == "FX":
-            QMessageBox.critical(self, "FX", "hip 파일 작업 예정입니다.",QMessageBox.Yes)
+            QMessageBox.critical(self, "FX", "Wip file to be worked on.",QMessageBox.Yes)
 
 
  

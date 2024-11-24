@@ -6,12 +6,7 @@ import shutil
 sys.path.append("/home/rapa/git/pipeline/api_scripts")
 sys.path.append("/usr/local/lib/python3.6/site-packages")
 import subprocess
-import maya.cmds as cmds
-import maya.mel as mel
-from maya import OpenMayaUI as omui
 from shiboken2 import wrapInstance
-from shotgun_api3 import Shotgun
-# import shotgun_api3.Shotgun
 
 try:
     from PySide6.QtWidgets import QApplication, QLabel, QTextEdit
@@ -24,6 +19,9 @@ except:
     from PySide2.QtWidgets import QWidget, QPushButton, QMessageBox
     from PySide2.QtUiTools import QUiLoader
     from PySide2.QtCore import QFile, Qt
+
+from moomins.api_scripts.shotgun_api import ShotgunApi as sg_api
+import moomins.api_scripts.maya_api as maya_api
 
 
 class ShotPublish(QWidget):
@@ -46,11 +44,13 @@ class ShotPublish(QWidget):
         self.ui.pushButton_shotpub.clicked.connect(self.get_root_nodes)
 
 
-# UI 생성
     def make_ui(self):
-        my_path = os.path.dirname(__file__)#/home/rapa/env/maya/2023/scripts        
+        """
+        Create a UI
+        """
+        my_path = os.path.dirname(__file__)      
         ui_file_path = my_path +"/shot_publish.ui"
-        
+
         ui_file = QFile(ui_file_path)
         loader = QUiLoader()
         self.ui = loader.load(ui_file, self)
@@ -62,32 +62,33 @@ class ShotPublish(QWidget):
         SCRIPT_NAME = "moomins_key"
         API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
 
-        # self.sg = shotgun.Shotgun(URL,
-        #                         SCRIPT_NAME,
-        #                         API_KEY)
-        self.sg = Shotgun(URL,
-                                SCRIPT_NAME,
-                                API_KEY)
+        self.sg = sg_api(URL,
+                        SCRIPT_NAME,
+                        API_KEY)
 
-# 현재 작업 중인 shot 파일의 경로
+# Path to the shot file you are working on
     def get_current_file_path(self): 
-        self.current_file_path = cmds.file(query=True, sceneName=True)
+        self.current_file_path = maya_api.get_current_maya_file_path()
         return self.current_file_path
-# 경로를 통해 정보 가져오기    
+
+    # Get information through the path
     def get_project(self):
-        split_file_path = self.current_file_path.split("/") #['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
+        split_file_path = self.current_file_path.split("/")
+        # ['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
         project_name = split_file_path[4] #'Marvelous'
         self.ui.label_project.setText(project_name)
         return project_name
     
     def get_seq_name(self):
-        split_file_path = self.current_file_path.split("/") #['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
+        split_file_path = self.current_file_path.split("/")
+        # ['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
         seq_name = split_file_path[6] #FCG
         self.ui.label_seq_name.setText(seq_name)
         return seq_name
 
     def get_seq_number(self):
-        split_file_path = self.current_file_path.split("/") #['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
+        split_file_path = self.current_file_path.split("/")
+        # ['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
         seq_number = split_file_path[7] # FCG_0010
         self.ui.label_seq_number.setText(seq_number)
         return seq_number
@@ -102,11 +103,12 @@ class ShotPublish(QWidget):
         return shot_id
 
     def get_shot_version(self):
-        split_file_path = self.current_file_path.split("/") #['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
-        shot_version = split_file_path[-1] #FCG_0010_light_v001.ma
+        split_file_path = self.current_file_path.split("/")
+        # ['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
+        shot_version = split_file_path[-1] # FCG_0010_light_v001.ma
         p = re.compile('v\d{3}')
         p_data = p.search(shot_version)
-        version = p_data.group() #v001
+        version = p_data.group() # v001
         self.ui.label_version.setText(version)
         return version
 
