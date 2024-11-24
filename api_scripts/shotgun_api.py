@@ -473,3 +473,11 @@ class ShotgunApi:
                 break
         if all_re == True:
             self.sg.update("Asset", shot_id, {"sg_status_list": "re"})
+
+
+    def get_shot_id(self, seq_num):
+        shot_filter = [["code", "is", seq_num]] # AFT_0010
+        shot_field = ["id"]
+        shot_entity = self.sg.find_one("Shot", filters=shot_filter, fields=shot_field)
+        shot_id = shot_entity['id']
+        return shot_id

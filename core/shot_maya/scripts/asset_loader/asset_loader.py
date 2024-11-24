@@ -8,7 +8,7 @@ from glob import glob
 from configparser import ConfigParser
 from pprint import pprint
 from functools import partial
-from importlib import reload
+
 try:
     from PySide6.QtWidgets import QApplication, QWidget, QGridLayout
     from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QVBoxLayout
@@ -25,9 +25,8 @@ except:
     from PySide2.QtCore import QFile, Qt, Signal
 
 from moomins.api_scripts.shotgun_api import ShotgunApi
-import moomins.api_scripts.maya_api as maya_api
+from moomins.api_scripts.maya_api import MayaApi
 
-reload(maya_api)
 
 
 class AssetLoader(QWidget):
@@ -38,6 +37,7 @@ class AssetLoader(QWidget):
         self.user_id = user_id
 
         self.sg_api = ShotgunApi
+        self.maya_api = MayaApi
         self.sg_api.get_datas_by_user_id(self.user_id)
         self.get_user_id() # Loader를 통해서 마야를 실행했을 때 터미널에 있는 user_id를 받아서 user_name을 찾는다
 
@@ -45,7 +45,7 @@ class AssetLoader(QWidget):
         self.event_func() # 이벤트 함수 모음
 
         self.get_shot_info_from_current_directory() # 현재 작업 파일 경로에서 데이터 추출
-        self.current_dict = maya_api.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
+        self.current_dict = self.self.maya_api.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
         self.classify_task() # task 별로 다른 함수를 실행할 수 있도록 classyfy_task 함수에 task 전달
         self.compare_assets()
 
@@ -76,7 +76,7 @@ class AssetLoader(QWidget):
 
     def get_shot_info_from_current_directory(self): # project, seq_name, seq_num, task, version, shot_id 추출
 
-        current_file_path = maya_api.get_current_file_directory()
+        current_file_path = self.maya_api.get_current_file_directory()
         self.project = current_file_path.split("/")[4] # Moomins
         seq_name = current_file_path.split("/")[6] # AFT
         self.seq_num = current_file_path.split("/")[7] # AFT_0010
@@ -557,7 +557,7 @@ class AssetLoader(QWidget):
             pushButton_update.setStyleSheet("QPushButton { background-color: transparent; border: none; }") # Update 버튼 보이지 않도록 투명하게 숨기기
 
         new_path = ini[section]["asset pub directory"]
-        pushButton_update.clicked.connect(lambda: maya_api.update_reference_file_path(ref_node, new_path, pushButton_update))
+        pushButton_update.clicked.connect(lambda: self.maya_api.update_reference_file_path(ref_node, new_path, pushButton_update))
 
         # 컨테이너 위젯에 h_ly 설정
         layout = QHBoxLayout()
@@ -706,7 +706,7 @@ class AssetLoader(QWidget):
         print("선택한 asset들을 현재 scene으로 import 하겠습니다")
 
         for path in selected_list:
-            reference_node = maya_api.import_reference_asset(path)
+            reference_node = self.maya_api.import_reference_asset(path)
             if not reference_node:
                 print (f"{path} 레퍼런스 임포트에 실패했습니다.")
                 continue
@@ -730,16 +730,16 @@ class AssetLoader(QWidget):
 
         shader_ma_path = folder_path + "/" + file_name
         shader_json_path = shader_ma_path.replace("shader", "json").replace(".ma", ".json")
-        maya_api.assign_shader_to_asset(reference_node, shader_json_path, shader_ma_path)
+        self.maya_api.assign_shader_to_asset(reference_node, shader_json_path, shader_ma_path)
 
     def import_shader(self, shader_ma_path, shader_json_path):
         print("shader가 들어있는 shader.ma 파일과 shader assign 정보가 들어있는 shader.json을 불러와서 오브젝트에 붙이기")
-        maya_api.import_shader(shader_ma_path, shader_json_path)
+        self.maya_api.import_shader(shader_ma_path, shader_json_path)
 
     def set_undistortion_size(self): # 현재 씬의 Render setting Image Size 설정
         undistortion_height, undistortion_width = self.sg_api.get_undistortion_size(self.shot_id)
 
-        maya_api.set_render_resolution(undistortion_height, undistortion_width)
+        self.maya_api.set_render_resolution(undistortion_height, undistortion_width)
 
     def set_frame_range(self): # 현재 씬의 Frame Range 설정
         start_frame, end_frame = self.sg_api.get_frame_range()
@@ -755,7 +755,7 @@ class AssetLoader(QWidget):
         else:
             end_frame = adjusted_end_frame
 
-        maya_api.set_frame_range(adjusted_start_frame, adjusted_end_frame)
+        self.maya_api.set_frame_range(adjusted_start_frame, adjusted_end_frame)
 
 
 
@@ -766,7 +766,7 @@ class AssetLoader(QWidget):
         self.ui.tableWidget.clear() # tableWidet의 모든 row를 비움
 
         # sg 데이터 다시 불러와서 테이블에 넣음
-        self.current_dict = maya_api.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
+        self.current_dict = self.maya_api.get_reference_assets() # 현재 씬에 있는 reference Asset name, 경로
         self.classify_task() # task 별로 다른 함수를 실행할 수 있도록 classyfy_task 함수에 task 전달
 
         self.get_linked_cam_link_info()

@@ -5,7 +5,7 @@ import maya.mel as mel
 from maya import OpenMayaUI as omui
 
 
-class MayaAPI:
+class MayaApi:
     def __init__(self):
         pass
 
@@ -21,11 +21,9 @@ class MayaAPI:
 
     def assign_shader_to_asset(reference_node, shader_json_file, shader_ma_file):
         """
-        애셋에 셰이더를 붙이는 함수입니다.
+        Assign shader to assets.
         셰이더는 ma파일과 셰이더 어싸인 정보가 담긴 json 파일을 이용합니다.
         """
-        print ("*******************")
-        print ("assign_shader_to_asset")
         print (reference_node, shader_json_file, shader_ma_file)
         
         node_name = cmds.referenceQuery(reference_node, nodes=True, dagPath=True)[0]
@@ -189,3 +187,12 @@ class MayaAPI:
         return file_path
 
 
+    def get_root_nodes():
+        assemblies = cmds.ls(assemblies=True)
+        camera_shapes = cmds.ls(cameras=True)
+        cameras = cmds.listRelatives(camera_shapes, parent=True)
+        return assemblies, cameras
+    
+    def export_mb(mb_file_path):
+        cmds.file(rename=mb_file_path)
+        cmds.file(mb_file_path, exportAll=True, type="mayaBinary", force=True)
