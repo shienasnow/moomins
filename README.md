@@ -5,10 +5,12 @@
 
 ### Demo Reels
 [@Moomins Pipeline Team Channel](https://www.youtube.com/@NFXMoomins2024/videos)
-| Asset Pipeline | Lookdev Dept  | [@Video](https://youtu.be/0P0iHkYt0OI?si=HCn1jY91y8nt1T0w)
-| Shot Pipeline  | Layout Dept   | [@Video](https://youtu.be/_bSvw0jTWvc?si=bVcHb_R883TwFA4b)
-| Shot Pipeline  | Lighitng Dept | [@Video](https://youtu.be/WVaZMLCwjKs?si=Hqx80I_eaoCdn7eo)
-| Shot Pipeline  | Comp Dept     | [@Video](https://youtu.be/hPuDBoU4WeQ?si=SOlPmenjOTkBYTxJ)
+| Pipeline   | Step        | GitHub Profile                                
+|--------|-------------|---------------------------------------------
+| Asset   | Lookdev Dept      | [@Video](https://youtu.be/0P0iHkYt0OI?si=HCn1jY91y8nt1T0w)
+| Shot    | Kim Dami      | [@Video](https://youtu.be/_bSvw0jTWvc?si=bVcHb_R883TwFA4b)
+| Shot    | Park Han Byeol      | [@Video](https://youtu.be/WVaZMLCwjKs?si=Hqx80I_eaoCdn7eo)
+| Shot    | Park Ju Seok      | [@Video](https://youtu.be/hPuDBoU4WeQ?si=SOlPmenjOTkBYTxJ)
 
 
 ### Project Overview
