@@ -1,4 +1,4 @@
-# Maya Asset Importer (ly, ani, lgt)
+# Maya Asset Loader (ly, ani, lgt)
 import sys
 import os
 import subprocess
@@ -23,13 +23,14 @@ except:
     from PySide2.QtUiTools import QUiLoader
     from PySide2.QtGui import QPixmap
     from PySide2.QtCore import QFile, Qt, Signal
-from moomins.api_scripts.sg_api import ShotgunApi
-import moomins.api_scripts.maya_api as maya_api # maya 모듈
+
+from moomins.api_scripts.shotgun_api import ShotgunApi
+import moomins.api_scripts.maya_api as maya_api
 
 reload(maya_api)
 
 
-class Import(QWidget):
+class AssetLoader(QWidget):
 
     def __init__(self, user_id):
         super().__init__()
@@ -308,14 +309,14 @@ class Import(QWidget):
 # UI (현재 Task에 따라 필요한 ini 불러와서 UI에 넣기)
     def make_ui(self): # ui를 띄우고 하드 코딩 필요한 부분 추가 (아이콘, 썸네일)
         my_path = os.path.dirname(__file__)
-        ui_file_path = my_path + "/asset_import.ui"
+        ui_file_path = my_path + "/asset_loader.ui"
 
         ui_file = QFile(ui_file_path)
         ui_file.open(QFile.ReadOnly)
         loader = QUiLoader()
         self.ui = loader.load(ui_file, self)
         self.ui.show()
-        self.setWindowTitle("Asset import")
+        self.setWindowTitle("Asset Loader")
         ui_file.close()
 
         # 더블 클릭 할 수 있는 라벨 생성해서 vereticalLayout_2의 가장 상단에 넣기
@@ -792,6 +793,6 @@ class DoubleClickableLabel(QLabel): # 더블 클릭 가능한 label 객체
 if __name__ == "__main__":
     if not QApplication.instance():
         app = QApplication(sys.argv)
-    win = Import()
+    win = AssetLoader()
     win.show()
     app.exec()
