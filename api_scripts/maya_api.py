@@ -1,5 +1,11 @@
 import os
 import json
+try:
+    from PySide6.QtWidgets import QMessageBox
+    from PySide6.QtGui import *
+except:
+    from PySide2.QtWidgets import QMessageBox
+    from PySide2.QtGui import *
 import maya.cmds as cmds
 import maya.mel as mel
 from maya import OpenMayaUI as omui
@@ -196,3 +202,164 @@ class MayaApi:
     def export_mb(mb_file_path):
         cmds.file(rename=mb_file_path)
         cmds.file(mb_file_path, exportAll=True, type="mayaBinary", force=True)
+
+    def export_abc(root_nodes, abc_file_path):
+        cmds.select(root_nodes, replace=True)
+
+        abc_export_cmd = '-frameRange {} {} -dataFormat ogawa '.format(start_frame, end_frame)
+        for root in root_nodes:
+            abc_export_cmd += '-root {} '.format(root)
+        abc_export_cmd += '-file "{}"'.format(abc_file_path)
+
+        start_frame = cmds.playbackOptions(q=True, min=True)
+        end_frame = cmds.playbackOptions(q=True, max=True)
+
+        try:
+            cmds.AbcExport(j=abc_export_cmd)
+            print (f'The Alembic file was successfully exported.: {abc_file_path}')
+        except:
+            print (f"Alembic Export Error : {str(e)}")
+            error_msg_box = QMessageBox()
+            error_msg_box.setIcon(QMessageBox.Critical)
+            error_msg_box.setText(f"Error during creation '{abc_file_path}' : {str(e)}")
+            error_msg_box.setWindowTitle("File Export Failed")
+            error_msg_box.setStandardButtons(QMessageBox.Ok)
+            error_msg_box.exec()
+
+    def export_camera_abc(camera_file_path):
+        # Select camera node only
+        camera_list = []
+        camera_shapes = cmds.ls(type='camera')
+        cameras = cmds.listRelatives(camera_shapes, parent=True)
+        for camera in cameras:
+            if camera in ["front", "top", "side", "persp"]:
+                continue
+            camera_list.append(camera)
+        if len(camera_list) > 1:
+            QMessageBox.about("Warning", "There are at least two cameras in the current scene.\nPlease leave the camera for the current sequence.")
+            return
+        camera1 = camera_list[0] # camera1
+
+        # Setting Alembic Export Commands
+        start_frame = cmds.playbackOptions(q=True, min=True)
+        end_frame = cmds.playbackOptions(q=True, max=True)
+
+        # Generating Alemic export commands
+        abc_export_cmd = '-frameRange {} {} -dataFormat ogawa -root {} -file "{}"'.format(
+        start_frame-10, end_frame+10, camera1, camera_file_path)
+
+        # Execute Alembic Export
+        try:
+            cmds.AbcExport(j=abc_export_cmd)
+            print (f'The Alembic file was successfully exported.\nFile path : {camera_file_path}')
+
+        except Exception as e:
+            print (f"Alembic Export Error : {str(e)}")
+
+    def set_render_resolution2(default_resolution, width, height):
+        cmds.setAttr(f"{default_resolution}.width", width)
+        cmds.setAttr(f"{default_resolution}.height", height)
+
+    def arnold_render_setting(camera, image_size_width, image_size_height, version_folder):
+
+        # Load Arnold Plug-in
+        if not cmds.pluginInfo('mtoa', query=True, loaded=True):
+            cmds.loadPlugin('mtoa')
+        
+        # Import the frame range of Maya Scene
+        start_frame = cmds.playbackOptions(q=True, min=True)
+        end_frame = cmds.playbackOptions(q=True, max=True)
+        
+        # Arnold renderer settings
+        cmds.setAttr("defaultRenderGlobals.currentRenderer", "arnold", type="string")
+        cmds.setAttr("defaultRenderGlobals.startFrame", start_frame)
+        cmds.setAttr("defaultRenderGlobals.endFrame", end_frame)
+
+        if cmds.objExists(camera):
+            cmds.setAttr(f"{camera}.renderable", 1)  # Enable render camera (1 is enabled, 0 is disabled)
+
+        render_layers = cmds.ls(type="renderLayer")
+        for layer in render_layers:
+            if cmds.getAttr(layer + ".renderable") == 1:  # Select only renderingable layers.
+                cmds.editRenderLayerGlobals(currentRenderLayer=layer)
+
+                # Output path setting - '<RenderLayer>' token added
+                output_path = os.path.join(version_folder, "<RenderLayer>/<Scene>")
+                cmds.setAttr("defaultRenderGlobals.imageFilePrefix", output_path, type="string")
+
+                # Arnold Image Format Settings
+                cmds.setAttr("defaultArnoldDriver.aiTranslator", "exr", type="string")  # EXR 형식으로 설정
+                cmds.setAttr("defaultArnoldDriver.colorManagement", 1)  # ACES 색상 관리 활성화
+
+                # Setting render options
+                cmds.setAttr("defaultRenderGlobals.imageFormat", 7)  # EXR format
+                cmds.setAttr("defaultRenderGlobals.animation", 1)  # Activating Animation
+                cmds.setAttr("defaultRenderGlobals.useFrameExt", 1)  # Include a frame in the file name
+                cmds.setAttr("defaultRenderGlobals.outFormatControl", 0)  # Disable Default Format Control
+                cmds.setAttr("defaultRenderGlobals.putFrameBeforeExt", 1)  # Insert frame number before file extension
+                cmds.setAttr("defaultRenderGlobals.extensionPadding", 4)  # Set to Padding 4 for Frame Number
+
+                # Setting Frame Range
+                render_first_frame = int(start_frame)
+                render_last_frame = int(end_frame)
+                
+                # Rendering by each frame
+                for frame in range(render_first_frame, render_last_frame + 1):
+                    # Frame Settings
+                    cmds.currentTime(frame)
+
+                    # Perform rendering (without render view)
+                    cmds.arnoldRender(cam=camera, seq=(frame, frame), x=image_size_width, y=image_size_height)
+
+
+    def get_camera_names():
+
+        # Default Camera Name List
+        default_cameras = ["front", "persp", "side", "top"]
+
+        # Find all camera nodes
+        all_cameras = cmds.ls(type='camera', long=True)
+
+        # Gets the parent node name of the camera.
+        camera_names = []
+        for camera in all_cameras:
+            parent_node = cmds.listRelatives(camera, parent=True, fullPath=True)
+            if parent_node:
+                camera_names.append(parent_node[0])
+
+        # Exclude the default camera name.
+        filtered_cameras = []
+        for camera_name in camera_names:
+            short_name = camera_name.split('|')[-1]
+            if short_name not in default_cameras:
+                filtered_cameras.append(short_name)
+
+        if filtered_cameras:
+            # Combines filtered camera names into strings.
+            camera_names_str = ', '.join(filtered_cameras)
+            print("All cameras except the default ones have been selected in the outliner.")
+
+        return camera_names_str
+
+    def get_coverage_values(result, camera_name):
+        # Find the shape node on the camera
+        camera_undistortion = {}
+        shapes = cmds.listRelatives(result, shapes=True, type='camera')
+        camera_shape = shapes[0]
+
+        # Find the image plane on the camera
+        image_planes = cmds.listConnections(camera_shape, type='imagePlane') # explore other connected nodes in an object.
+        image_plane = image_planes[0]
+
+        # Get coverageX and coverageY values
+        try:
+            coverage_x = cmds.getAttr(f"{image_plane}.coverageX")
+            coverage_y = cmds.getAttr(f"{image_plane}.coverageY")
+            camera_undistortion[camera_name] = {
+                "width" : coverage_x,
+                "height" : coverage_y
+            }
+            return camera_undistortion
+
+        except Exception as e:
+            print(f"Error getting image plane property value: {e}")

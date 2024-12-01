@@ -34,7 +34,7 @@ class ShotPublish(QWidget):
         self.maya_api = MayaApi()
         
         self.make_ui()
-        self.connect_sg()
+        self.sg_api.connect_sg()
 
         self.get_current_file_path()
         self.get_project()
@@ -46,7 +46,6 @@ class ShotPublish(QWidget):
         self.classify_task()
 
         self.ui.pushButton_shotpub.clicked.connect(self.get_root_nodes)
-
 
     def make_ui(self):
         """
@@ -61,19 +60,9 @@ class ShotPublish(QWidget):
         self.setWindowTitle("Shot Publish")
         ui_file.close()
 
-    def connect_sg(self):
-        URL = "https://4thacademy.shotgrid.autodesk.com"
-        SCRIPT_NAME = "moomins_key"
-        API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
-
-        self.sg = sg_api(URL,
-                        SCRIPT_NAME,
-                        API_KEY)
-
-
     # Path to the shot file you are working on
     def get_current_file_path(self): 
-        self.current_file_path = maya_api.get_current_maya_file_path()
+        self.current_file_path = self.maya_api.get_current_maya_file_path()
         return self.current_file_path
 
 
@@ -219,7 +208,6 @@ Lighting Team Cleanup List\n
             self.ui.pushButton_shotpub.clicked.connect(self.make_pub_path)
             self.ui.pushButton_shotpub.clicked.connect(self.export_mb)
 
-            #수정
             self.ui.pushButton_shotpub.clicked.connect(self.export_exr)
             self.ui.pushButton_shotpub.clicked.connect(self.copy_folders)
 
@@ -337,31 +325,11 @@ Lighting Team Cleanup List\n
         if not root_nodes:
             print ('No root node to export.')
             return
-        cmds.select(root_nodes, replace=True)
 
-        start_frame = cmds.playbackOptions(q=True, min=True)
-        end_frame = cmds.playbackOptions(q=True, max=True)
+        # Execute ABC Export
+        self.maya_api.export_abc(root_nodes, abc_file_path)
 
-        abc_export_cmd = '-frameRange {} {} -dataFormat ogawa '.format(start_frame, end_frame)
-        for root in root_nodes:
-            abc_export_cmd += '-root {} '.format(root)
-        abc_export_cmd += '-file "{}"'.format(abc_file_path)
-
-        try:
-            cmds.AbcExport(j=abc_export_cmd)
-            print (f'The Alembic file was successfully exported.: {abc_file_path}')
-
-        except Exception as e:
-            print (f"Alembic Export Error : {str(e)}")
-            error_msg_box = QMessageBox()
-            error_msg_box.setIcon(QMessageBox.Critical)
-            error_msg_box.setText(f"Error during creation '{abc_file_path}' : {str(e)}")
-            error_msg_box.setWindowTitle("File Export Failed")
-            error_msg_box.setStandardButtons(QMessageBox.Ok)
-            error_msg_box.exec()
-
-    def export_camera_alembic(self): # cache/v001 안에 camera abc export
-        # camera = self.get_camera_names() # camera1
+    def export_camera_alembic(self): # Export Camera ABC
 
         project = self.get_project() # Marvelous
         seq_name = self.get_seq_name() # FCG
@@ -373,38 +341,9 @@ Lighting Team Cleanup List\n
         self.pub_path = os.path.join(self.open_pub_path,'cache',version)
         camera_file_path = os.path.join(self.open_pub_path,'cache',version,f'{seq_number}_{task}_cam.abc')
 
-        # Select camera node only
-        camera_list = []
-        camera_shapes = cmds.ls(type='camera')
-        cameras = cmds.listRelatives(camera_shapes, parent=True)
-        for camera in cameras:
-            if camera in ["front", "top", "side", "persp"]:
-                continue
-            camera_list.append(camera)
-        if len(camera_list) > 1:
-            QMessageBox.about(self, "Warning", "There are at least two cameras in the current scene.\nPlease leave the camera for the current sequence.")
-            return
-        camera1 = camera_list[0] # camera1
-
-        # Setting Alembic Export Commands
-        start_frame = cmds.playbackOptions(q=True, min=True)
-        end_frame = cmds.playbackOptions(q=True, max=True)
-
-        # Generating Alemic export commands
-        abc_export_cmd = '-frameRange {} {} -dataFormat ogawa -root {} -file "{}"'.format(
-        start_frame-10, end_frame+10, camera1, camera_file_path)
-
-        print (abc_export_cmd)
-        # Execute Alembic Export
-        try:
-            cmds.AbcExport(j=abc_export_cmd)
-            print (f'The Alembic file was successfully exported.\nFile path : {camera_file_path}')
-
-        except Exception as e:
-            print (f"Alembic Export Error : {str(e)}")
+        self.maya_api.export_camera_abc(camera_file_path)
 
         return camera_file_path
-   
 
 
     def extract_version(self, file_path):
@@ -426,54 +365,34 @@ Lighting Team Cleanup List\n
         default_resolution = 'defaultResolution'
         
         # Sets the image size.
-        cmds.setAttr(f"{default_resolution}.width", width)
-        cmds.setAttr(f"{default_resolution}.height", height)
+        self.maya_api.set_render_resolution2(default_resolution, width, height)
 
 
     def export_exr(self):
 
-        # Load Arnold Plug-in
-        if not cmds.pluginInfo('mtoa', query=True, loaded=True):
-            cmds.loadPlugin('mtoa')
-        
-        # Import the frame range of Maya Scene
-        start_frame = cmds.playbackOptions(q=True, min=True)
-        end_frame = cmds.playbackOptions(q=True, max=True)
-        
-        # Arnold renderer settings
-        cmds.setAttr("defaultRenderGlobals.currentRenderer", "arnold", type="string")
-        cmds.setAttr("defaultRenderGlobals.startFrame", start_frame)
-        cmds.setAttr("defaultRenderGlobals.endFrame", end_frame)
-
-        # Camera Settings for Rendering
-        camera = self.get_camera_names()
-        print(camera)
-        if cmds.objExists(camera):
-            cmds.setAttr(f"{camera}.renderable", 1)  # Enable render camera (1 is enabled, 0 is disabled)
+        camera = self.get_camera_names() # Camera Settings for Rendering
+        self.maya_api.arnold_render_setting(camera)
 
         # Gets the path to the currently open file.
-        current_file = cmds.file(q=True, sceneName=True)
-        images_path = current_file.replace("scenes", "images")
+        current_file_path =self.maya_api.get_current_file_directory()
+        images_path = current_file_path.replace("scenes", "images")
 
         file_name = os.path.dirname(images_path)
         pub_path = file_name.replace("wip","pub")
         file_path = pub_path.split('/')[:-1]
         base_folder = '/'.join(file_path)
 
-        
         # Undistortion Size
         image_size = self.get_image_plane_coverage()
         camera_names = self.get_camera_names()
-        
         image_size_width = int(image_size[camera_names]["width"]) 
         image_size_height = int(image_size[camera_names]["height"]) 
         
         # Image Size Settings
-        self.set_image_size(image_size_width, image_size_height)        
-        
-        
+        self.set_image_size(image_size_width, image_size_height)
+
         # Extract version number from file path.
-        version = self.extract_version(current_file)
+        version = self.extract_version(current_file_path)
         ver = f"v{version}"
 
         # Create a version folder
@@ -485,40 +404,8 @@ Lighting Team Cleanup List\n
             os.makedirs(self.version_folder)
 
         # Enable rendering of all render layers.
-        render_layers = cmds.ls(type="renderLayer")
-        for layer in render_layers:
-            if cmds.getAttr(layer + ".renderable") == 1:  # Select only renderingable layers.
-                cmds.editRenderLayerGlobals(currentRenderLayer=layer)
+        self.maya_api.arnold_render_setting(camera, image_size_width, image_size_height, self.version_folder)
 
-                # Output path setting - '<RenderLayer>' token added
-                output_path = os.path.join(self.version_folder, "<RenderLayer>/<Scene>")
-                cmds.setAttr("defaultRenderGlobals.imageFilePrefix", output_path, type="string")
-
-                # Arnold Image Format Settings
-                cmds.setAttr("defaultArnoldDriver.aiTranslator", "exr", type="string")  # EXR 형식으로 설정
-                cmds.setAttr("defaultArnoldDriver.colorManagement", 1)  # ACES 색상 관리 활성화
-
-                # Setting render options
-                cmds.setAttr("defaultRenderGlobals.imageFormat", 7)  # EXR format
-                cmds.setAttr("defaultRenderGlobals.animation", 1)  # Activating Animation
-                cmds.setAttr("defaultRenderGlobals.useFrameExt", 1)  # Include a frame in the file name
-                cmds.setAttr("defaultRenderGlobals.outFormatControl", 0)  # Disable Default Format Control
-                cmds.setAttr("defaultRenderGlobals.putFrameBeforeExt", 1)  # Insert frame number before file extension
-                cmds.setAttr("defaultRenderGlobals.extensionPadding", 4)  # Set to Padding 4 for Frame Number
-
-                # Setting Frame Range
-                render_first_frame = int(start_frame)
-                render_last_frame = int(end_frame)
-                
-                # Rendering by each frame
-                for frame in range(render_first_frame, render_last_frame + 1):
-                    # Frame Settings
-                    cmds.currentTime(frame)
-
-                    # Perform rendering (without render view)
-                    cmds.arnoldRender(cam=camera, seq=(frame, frame), x=image_size_width, y=image_size_height)
-
-                    
     def extract_version_folder_name(self,folder_name):
         """
         Extract the version number from the folder name.
@@ -526,7 +413,7 @@ Lighting Team Cleanup List\n
         match = re.search(r'v(\d{3})', folder_name)
         if match:
             return int(match.group(1))
-        
+
 
 
     def get_version_folders(self, base_folder, file_name):
@@ -545,9 +432,9 @@ Lighting Team Cleanup List\n
         """
         Returns the path of the current and previous versions based on the path of the currently open Maya file.
         """
-        # Get current file and path information
-        current_file = cmds.file(q=True, sceneName=True)  # Gets the path to the file that is currently open in Maya.
-        images_path = current_file.replace("scenes", "images")  # Replace "scenes" with "images".
+        # Get current file path.
+        current_file = self.maya_api.get_current_maya_file_path()
+        images_path = current_file.replace("scenes", "images")
         pub_path = images_path.replace("wip", "pub")
 
         file_name = os.path.basename(pub_path)  # Extract only the file name.
@@ -620,51 +507,32 @@ Lighting Team Cleanup List\n
     def get_task_id(self):
         # Get seq_num_id
         seq_num = self.get_seq_number()
-        seq_filter = [["code", "is", seq_num]] # Sequence number currently being worked on. ex.OPN_0010
-        seq_field = ["id"]
-        seq_info = self.sg.find_one("Shot", filters=seq_filter, fields=seq_field) # {'type': 'Asset', 'id': 1789}
-        seq_num_id = seq_info["id"]
-        print(f"seq_num_id : {seq_num_id}")
-
-        # Get step_id
         step_name = self.get_shot_task() # lgt, ly...
-        step_info = self.sg.find_one("Step",[["code", "is", step_name]], ["id"])
-        step_id = step_info["id"]
-        print(f"step id : {step_id}")
 
-        # find task id that meets seq_num_id, step_id condition.
-        task_filter = [
-            ["entity", "is", {"type": "Shot", "id": seq_num_id}],
-            ["step", "is", {"type": "Step", "id": step_id}]
-        ]
-        task_field = ["id"]
-        task_info = self.sg.find_one("Task", filters=task_filter, fields=task_field)
-        task_id = task_info["id"]
-        print(f"task id : {task_id}")
+        seq_num_id = self.sg_api.get_task_id(seq_num)
+        self.sg_api.get_step_id(step_name, seq_num_id)
 
-        return task_id
 
     def sg_status_update(self):
 
         task_id = self.get_task_id()
-        self.sg.update("Task", task_id, {"sg_status_list" : "pub"})
-
+        self.sg_api.update_status_to_pub(task_id)
         print(f"Update the status of {task_id} to pub in the Task entity.")
 
     def sg_abc_pub_directory_update(self):
-        print("Upload the path of the published abc file into the pub file directory field.")
         task_id = self.get_task_id()
         camera_path = self.export_camera_alembic()
         # /home/rapa/pub/Moomins/seq/AFT/AFT_0010/lgt/pub/cache/v001/AFT_0010_lgt_cam.abc
 
-        self.sg.update("Task", task_id, {"sg_description" : camera_path})
+        self.sg_api.update_camera_path(task_id, camera_path)
+        print("Upload the path of the published abc file into the pub file directory field.")
 
     def sg_pub_exr_directory_update(self):
         print("Upload the path of the published exr file into the pub file directory field.")
         task_id = self.get_task_id()
         exr_path  = self.version_folder()
 
-        self.sg.update("Task", task_id, {"sg_description" : exr_path})
+        self.sg_api.update_camera_path(task_id, exr_path)
 
 
 
@@ -672,49 +540,24 @@ Lighting Team Cleanup List\n
         """
         Get the name of the camera in Maya, excluding the Default camera
         """
-        # Default Camera Name List
-        default_cameras = ["front", "persp", "side", "top"]
+        self.maya_api.get_camera_names()
 
-        # Find all camera nodes
-        all_cameras = cmds.ls(type='camera', long=True)
-
-        # Gets the parent node name of the camera.
-        camera_names = []
-        for camera in all_cameras:
-            parent_node = cmds.listRelatives(camera, parent=True, fullPath=True)
-            if parent_node:
-                camera_names.append(parent_node[0])
-
-        # Exclude the default camera name.
-        filtered_cameras = []
-        for camera_name in camera_names:
-            short_name = camera_name.split('|')[-1]
-            if short_name not in default_cameras:
-                filtered_cameras.append(short_name)
-
-        if filtered_cameras:
-            # Combines filtered camera names into strings.
-            camera_names_str = ', '.join(filtered_cameras)
-            print("All cameras except the default ones have been selected in the outliner.")
-
-            return camera_names_str
-
-    def sg_undistort_size_update(self): # Update the undistortion size from the camera in the match move step to sg.
+    def sg_undistort_size_update(self):
+        """
+        Update the undistortion size from the camera in the match move step to sg.
+        """
         undistortion_dict = self.get_image_plane_coverage()
-        print(undistortion_dict)
-        # {'camera1': {'width': 2040, 'height': 1220}}
-        camera_names = self.get_camera_names()
-        print(camera_names) # camera1
+        print(undistortion_dict) # {'camera1': {'width': 2040, 'height': 1220}}
+        camera_names = self.get_camera_names() # camera1
         
         undistortion_width = str(undistortion_dict[camera_names]["width"]) # 2040 (str)
         undistortion_height = str(undistortion_dict[camera_names]["height"]) # 1220 (str)
 
-        shot_id = self.get_shot_id()
-        print(shot_id) # 1353
+        shot_id = self.get_shot_id() # 1353
 
         # Upload each to the undistortion size field of the SG Shot entity.
-        self.sg.update("Shot", shot_id, {"sg_undistortion_width" : undistortion_width,
-                                         "sg_undistortion_height" : undistortion_height})
+        self.sg_api.update_undistortion_size(shot_id, undistortion_width, undistortion_height)
+
 
     def get_image_plane_coverage(self):
         """
@@ -728,27 +571,8 @@ Lighting Team Cleanup List\n
         seq_name = split_name[:2]
         camera_name = "_".join(seq_name)
 
-        # Find the shape node on the camera
-        camera_undistortion = {}
-        shapes = cmds.listRelatives(result, shapes=True, type='camera')
-        camera_shape = shapes[0]
+        self.maya_api.get_coverage_values(result, camera_name)
 
-        # Find the image plane on the camera
-        image_planes = cmds.listConnections(camera_shape, type='imagePlane') # explore other connected nodes in an object.
-        image_plane = image_planes[0]
-
-        # Get coverageX and coverageY values
-        try:
-            coverage_x = cmds.getAttr(f"{image_plane}.coverageX")
-            coverage_y = cmds.getAttr(f"{image_plane}.coverageY")
-            camera_undistortion[camera_name] = {
-                "width" : coverage_x,
-                "height" : coverage_y
-            }
-            return camera_undistortion
-
-        except Exception as e:
-            print(f"Error getting image plane property value: {e}")
 
 
 

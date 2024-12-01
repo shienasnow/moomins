@@ -47,7 +47,7 @@ class ShotUpload(QWidget):
 
 
         ex_path = cmds.file(q=True, sn=True)
-        # 샷 경로에서 : /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001/AFT_0010_v001_w001.mb
+        # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001/AFT_0010_v001_w001.mb
 
         open_file_name = os.path.basename(ex_path)  # AFT_0010_v001_w001.mb
         open_file_path = os.path.dirname(ex_path)   # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001
@@ -117,7 +117,6 @@ class ShotUpload(QWidget):
         self.ui.pushButton_capture.clicked.connect(self.push_capture_image_button)
         self.table.cellDoubleClicked.connect(self.double_click_table_widget)
         
-        # Backend 효은
         self.ui.pushButton_upload.clicked.connect(self.sg_status_update)
         self.ui.pushButton_upload.clicked.connect(self.sg_thumbnail_upload)
         self.ui.pushButton_upload.clicked.connect(self.sg_mov_upload)

@@ -9,7 +9,7 @@ class ShotgunApi:
     def __init__(self):
         self.connect_sg()
 
-    def connect_sg(self): # 샷그리드를 연결하는 메쏘드
+    def connect_sg(self):
         
         URL = "https://4thacademy.shotgrid.autodesk.com"
         SCRIPT_NAME = "moomins_key"
@@ -481,3 +481,47 @@ class ShotgunApi:
         shot_entity = self.sg.find_one("Shot", filters=shot_filter, fields=shot_field)
         shot_id = shot_entity['id']
         return shot_id
+
+
+
+
+
+
+# Shot Publish
+    def get_task_id(self, seq_num):
+        seq_filter = [["code", "is", seq_num]] # Sequence number currently being worked on. ex.OPN_0010
+        seq_field = ["id"]
+        seq_info = self.sg.find_one("Shot", filters=seq_filter, fields=seq_field) # {'type': 'Asset', 'id': 1789}
+        seq_num_id = seq_info["id"]
+        print(f"seq_num_id : {seq_num_id}")
+
+    def get_step_id(self, step_name, seq_num_id):
+        step_info = self.sg.find_one("Step",[["code", "is", step_name]], ["id"])
+        step_id = step_info["id"]
+        print(f"step id : {step_id}")
+
+        # find task id that meets seq_num_id, step_id condition.
+        task_filter = [
+            ["entity", "is", {"type": "Shot", "id": seq_num_id}],
+            ["step", "is", {"type": "Step", "id": step_id}]
+        ]
+        task_field = ["id"]
+        task_info = self.sg.find_one("Task", filters=task_filter, fields=task_field)
+        task_id = task_info["id"]
+        print(f"task id : {task_id}")
+
+        return task_id
+
+
+    def update_status_to_pub(self, task_id):
+        self.sg.update("Task", task_id, {"sg_status_list" : "pub"})
+
+    def update_camera_path(self, task_id, camera_path):
+        self.sg.update("Task", task_id, {"sg_description" : camera_path})
+
+    def update_camera_path(self, task_id, exr_path):
+        self.sg.update("Task", task_id, {"sg_description" : exr_path})
+
+    def update_undistortion_size(self, shot_id, undistortion_width, undistortion_height):
+        self.sg.update("Shot", shot_id, {"sg_undistortion_width" : undistortion_width,
+                                         "sg_undistortion_height" : undistortion_height})
