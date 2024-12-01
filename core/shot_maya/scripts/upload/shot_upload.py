@@ -1,8 +1,5 @@
-from maya import OpenMayaUI as omui
-import maya.cmds as cmds
+# Shot Upload
 import sys
-sys.path.append("/home/rapa/git/pipeline/api_scripts")
-sys.path.append("/usr/local/lib/python3.6/site-packages")
 import os
 import re
 import subprocess
@@ -25,13 +22,21 @@ except:
     from shiboken2 import wrapInstance
 from pprint import pprint
 from capture import capturecode
-from shotgun_api3 import shotgun
+
+from moomins.api_scripts.shotgun_api import ShotgunApi
+from moomins.api_scripts.maya_api import MayaApi
+
+sys.path.append("/home/rapa/git/pipeline/api_scripts")
+sys.path.append("/usr/local/lib/python3.6/site-packages")
+
 
 
 class ShotUpload(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.sg_api = ShotgunApi()
+        self.maya_api = MayaApi()
 
         self.connect_sg()
         self.make_ui()
@@ -39,6 +44,7 @@ class ShotUpload(QWidget):
         self.event_func()
 
     def input_path(self):
+
 
         ex_path = cmds.file(q=True, sn=True)
         # 샷 경로에서 : /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001/AFT_0010_v001_w001.mb
@@ -59,8 +65,6 @@ class ShotUpload(QWidget):
         split_path = file_path.split("/")                               # Moomins
         project = split_path[4]
         task = split_path[8]
-
-        print(f"**************************** version 출력 확인!!!! {version}")
 
         artist_name = self.get_artist_name()
 
@@ -95,13 +99,13 @@ class ShotUpload(QWidget):
         ui_file_path = self.file_path + "/shot_uploader.ui"
 
         ui_file = QFile(ui_file_path)
-        ui_file.open(QFile.ReadOnly)  # 이거 꼭 있어야 합니다
+        ui_file.open(QFile.ReadOnly)
         loader = QUiLoader()
         self.ui = loader.load(ui_file, self)
         self.setWindowTitle("Shot Uploader")
         ui_file.close()
 
-        self.table = self.ui.findChild(QTableWidget, "tableWidget")     # table위젯을 찾아서 table 로정의해준다.
+        self.table = self.ui.findChild(QTableWidget, "tableWidget")
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         layout = QGridLayout(self)
         layout.addWidget(self.ui)
@@ -176,7 +180,7 @@ class ShotUpload(QWidget):
 
         render_file_path = f"/home/rapa/wip/{project}/seq/{seq}/{seq_num}/{task}/wip/images/{self.version}"
 
-        input_file = sorted(os.listdir(render_file_path))[0]         # AFT_0010_v001_0001.jpg
+        input_file = sorted(os.listdir(render_file_path))[0] # AFT_0010_v001_0001.jpg
         replace_file = input_file.replace("1001","%04d")     # AFT_0010_v001_%04d.jpg
         command_file = f"{render_file_path}/{replace_file}"
 
@@ -188,7 +192,7 @@ class ShotUpload(QWidget):
         gamma = "-gamma 2.2"
         framerate = "-framerate 24"
         codec = "-c:v prores_ks"
-        date = datetime.datetime.now().strftime("%Y-%m-%d") # 렌더링하는 날짜.
+        date = datetime.datetime.now().strftime("%Y-%m-%d") # Render Date
 
         frame_data = f"%{{n}}/{frame_range}:start_number=1001"
 
@@ -211,20 +215,20 @@ class ShotUpload(QWidget):
             "-y"
         ]
 
-        # 리스트를 공백으로 구분하여 결합
+        # Combine lists separated by spaces
         command = " ".join(command_list)
         process = subprocess.Popen(command, 
-                               stdout=subprocess.PIPE,   # python 코드를 읽을수 있게 하는 코드
-                               stderr=subprocess.STDOUT, # 오류메세지 표준출력s
-                               universal_newlines=True,  # 줄바꿈 자동
+                               stdout=subprocess.PIPE,   # code that allows python code to be read
+                               stderr=subprocess.STDOUT, # Error Message Standard Output
+                               universal_newlines=True,  # Automatic line modulation
                                shell=True
                                )
 
 
-        for line in process.stdout:     # 디버깅 코드
+        for line in process.stdout:
             print(line, end='')
 
-        pattern = re.compile(r'\.\d{4}\.jpg$')              # .%04d.jpg 로 패턴을 잡아서 playblast로 만들어진 패턴 삭제
+        pattern = re.compile(r'\.\d{4}\.jpg$') # Delete a pattern made of playblast by catching a pattern with .%04d.jpg
         for filename in os.listdir(render_file_path):
             if pattern.search(filename):
                 remove_file_path = f"{render_file_path}/{filename}"
@@ -249,26 +253,25 @@ class ShotUpload(QWidget):
         file_data_list = self.set_text_label()
         project, only_file_name, task, artist_name, frame_range, seq, seq_num = file_data_list
         render_file_path = f"/home/rapa/wip/{project}/seq/{seq}/{seq_num}/{task}/wip/images/{self.version}"
-        print(f"렌더 패스 확인 : {render_file_path}")
+        print(f"Check Render Path : {render_file_path}")
 
         capture_name = only_file_name + ".jpg"
 
         self.capture_path = f"{render_file_path}/{capture_name}"
-        print("(****************)")
         print(self.capture_path) # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/images/v001/AFT_0010_v001.jpg
 
         self.capture = capturecode.Capture(self.capture_path)   
         self.capture.SIGNAL_CAPTURE.connect(self.call_back_capture)  
         self.capture.show()
 
-    def msg_box(self,message_type): # 알림 메세지 띄우는 함수..
+    def msg_box(self,message_type): # Raise the message
     
         if message_type == "NoneSelectCamera":
             QMessageBox.critical(self, "Error", "None Selected Camera", QMessageBox.Yes)
         if message_type == "ImageRenderComplete":
             QMessageBox.information(self, "Complete", "Image Render Complete", QMessageBox.Ok)
         if message_type == "NoneFile":
-            QMessageBox.critical(self, "Error", "파일이 없습니다.", QMessageBox.Yes)
+            QMessageBox.critical(self, "Error", "File Not Found", QMessageBox.Yes)
 
     def double_click_table_widget(self):
         select_index = self.table.currentRow()
@@ -279,7 +282,7 @@ class ShotUpload(QWidget):
                 self.msg_box("NoneFile")
         else:
             try:
-                print("파일 열기!")
+                print("Open FIle.")
                 subprocess.Popen(['xdg-open', self.capture_path])
             except FileNotFoundError:
                 self.msg_box("NoneFile")
@@ -303,15 +306,13 @@ class ShotUpload(QWidget):
         row_count = self.table.rowCount()
         if row_idx >= row_count:
             self.table.setRowCount(row_idx + 1)
-        
-        
+
         # seq_num ,version , task, ext , artistname , date
-            
         self.make_table_hard_coding(row_idx, thumbnail_image_path,seq_num ,version , task, ext , artist_name , date)
 
     def make_table_hard_coding(self,row_idx, thumbnail_image_path,seq_num ,version , task, ext , artist_name , date): # 하드코딩한 함수...
         """
-        하드 코딩으로 ui 만들기...!
+        Make UI hard
         """
 
         print(row_idx, thumbnail_image_path,seq_num ,version , task, ext , artist_name , date)
@@ -391,7 +392,7 @@ class ShotUpload(QWidget):
         SCRIPT_NAME = "moomins_key"
         API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
 
-        self.sg = shotgun.Shotgun(URL,
+        self.sg = self.sg_api.Shotgun(URL,
                                 SCRIPT_NAME,
                                 API_KEY)
 

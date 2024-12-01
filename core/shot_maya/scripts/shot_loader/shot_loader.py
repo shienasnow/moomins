@@ -8,27 +8,35 @@ import subprocess
 from pprint import pprint
 from importlib import reload
 
-from PySide6.QtWidgets import QApplication, QWidget, QTreeWidgetItem
-from PySide6.QtWidgets import QLabel, QMenu, QMessageBox
-from PySide6.QtWidgets import QGridLayout
-from PySide6.QtUiTools import QUiLoader
-from PySide6.QtCore import QFile, Qt
-from PySide6.QtGui import QPixmap, QAction,QGuiApplication
+try:
+    from PySide6.QtWidgets import QApplication, QWidget, QTreeWidgetItem
+    from PySide6.QtWidgets import QLabel, QMenu, QMessageBox
+    from PySide6.QtWidgets import QGridLayout
+    from PySide6.QtUiTools import QUiLoader
+    from PySide6.QtCore import QFile, Qt
+    from PySide6.QtGui import QPixmap, QAction,QGuiApplication
+except:
+    from PySide2.QtWidgets import QApplication, QWidget, QTreeWidgetItem
+    from PySide2.QtWidgets import QLabel, QMenu, QMessageBox
+    from PySide2.QtWidgets import QGridLayout
+    from PySide2.QtUiTools import QUiLoader
+    from PySide2.QtCore import QFile, Qt
+    from PySide2.QtGui import QPixmap, QAction,QGuiApplication
 
 from moomins.api_scripts.shotgun_api import ShotgunApi
-import moomins.api_scripts.maya_api as maya_api
-
-reload(maya_api)
+from moomins.api_scripts.maya_api import MayaApi
 
 
-class ShotLoader (QWidget): 
+class ShotLoader (QWidget):
 
     def __init__(self, user_id=None):
         super().__init__()
-        self.user_id = user_id
 
-        self.sg_cls = ShotgunApi()
-        self.sg_cls.get_datas_by_id(self.user_id)
+        self.sg_api = ShotgunApi()
+        self.maya_api = MayaApi()
+
+        self.user_id = user_id
+        self.sg_api.get_datas_by_id(self.user_id)
 
         self.make_ui()
 

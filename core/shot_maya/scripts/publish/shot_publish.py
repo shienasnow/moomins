@@ -20,14 +20,17 @@ except:
     from PySide2.QtUiTools import QUiLoader
     from PySide2.QtCore import QFile, Qt
 
-from moomins.api_scripts.shotgun_api import ShotgunApi as sg_api
-import moomins.api_scripts.maya_api as maya_api
+from moomins.api_scripts.shotgun_api import ShotgunApi
+from moomins.api_scripts.maya_api import MayaApi
 
 
 class ShotPublish(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        self.sg_api = ShotgunApi()
+        self.maya_api = MayaApi()
         
         self.make_ui()
         self.connect_sg()
@@ -74,37 +77,29 @@ class ShotPublish(QWidget):
     # Get information through the path
     def get_project(self):
         split_file_path = self.current_file_path.split("/")
-        # ['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
-        project_name = split_file_path[4] #'Marvelous'
+        project_name = split_file_path[4] # 'Marvelous'
         self.ui.label_project.setText(project_name)
         return project_name
     
     def get_seq_name(self):
         split_file_path = self.current_file_path.split("/")
-        # ['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
-        seq_name = split_file_path[6] #FCG
+        seq_name = split_file_path[6] # FCG
         self.ui.label_seq_name.setText(seq_name)
         return seq_name
 
     def get_seq_number(self):
         split_file_path = self.current_file_path.split("/")
-        # ['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
         seq_number = split_file_path[7] # FCG_0010
         self.ui.label_seq_number.setText(seq_number)
         return seq_number
 
     def get_shot_id(self):
         seq_num = self.get_seq_number()
-
-        shot_filter = [["code", "is", seq_num]] # AFT_0010
-        shot_field = ["id"]
-        shot_entity = self.sg.find_one("Shot", filters=shot_filter, fields=shot_field)
-        shot_id = shot_entity['id']
+        shot_id = self.sg_api.get_shot_id(seq_num)
         return shot_id
 
     def get_shot_version(self):
         split_file_path = self.current_file_path.split("/")
-        # ['', 'home', 'rapa', 'wip', 'Marvelous', 'seq', 'FCG', 'FCG_0010', 'lgt', 'wip', 'scenes', 'FCG_0010_light_v001.ma']
         shot_version = split_file_path[-1] # FCG_0010_light_v001.ma
         p = re.compile('v\d{3}')
         p_data = p.search(shot_version)
@@ -119,54 +114,58 @@ class ShotPublish(QWidget):
 
 
 
-# 현재 작업의 task를 분리해서 각각의 클린업리스트 보여주고, export할 때 다른 함수 실행
     def classify_task(self):
+        """
+        Separate the tasks of the current task,
+        show the clean-up list of each, and run other functions when exporting
+        """
         user_task = self.get_shot_task()
-        print(f"현재 작업 Task는 {user_task}입니다.")
+        print(f"The current working task is {user_task}.")
 
         # Matchmove : mb,      camera abc export + link    + sg status update + abc pub directory upload + sg undistortion size update
         # layout    : mb, abc, camera abc export + link    + sg status update + abc pub directory upload
         # Animation : mb, abc, camera abc export + link    + sg status update + abc pub directory upload
         # Lighting  : mb,             exr export + link    + sg status update + abc pub directory upload
-                                                           # sg update는 export 관련 함수 실행한 후에 classify task 함수 안에서 따로 실행
 
-        if user_task == 'mm': # Matchmove는 camera export + link + sg status update, abc pub directory upload, sg undistortion size update
+        # sg update runs separately within the classify task function after the export-related function is executed
+
+        if user_task == 'mm':
             mm_clean_up_list = """
-MatchMove팀 클린업리스트\n
-- 카메라 트래킹 데이터 정리 및 최적화
-- 3D 포인트 클라우드 정리
-- 불필요한 트래킹 마커 제거
-- 카메라 움직임 스무딩
-- 렌즈 왜곡 보정
-- 3D 지오메트리와 실사 영상의 정렬 확인
-- 카메라 데이터 포맷 변환 및 내보내기
-- 작업 파일 정리 및 문서화
+MatchMove Team Cleanup List\n
+- Organize and optimize camera tracking data
+- 3D Point Cloud Cleanup
+- Remove unnecessary tracking markers
+- Camera movement smoothing
+- Correction of lens distortion
+- Check the alignment of 3D geometry and live-action images
+- Converting and exporting camera data
+- Organizing and documenting job files
             """
             self.ui.textEdit_shotcomment.setText(mm_clean_up_list)
-            self.ui.pushButton_shotpub.clicked.connect(self.make_pub_path) # 폴더 생성
+            self.ui.pushButton_shotpub.clicked.connect(self.make_pub_path) # Create Directory
             self.ui.pushButton_shotpub.clicked.connect(self.export_mb)
             self.ui.pushButton_shotpub.clicked.connect(self.export_camera_alembic)
 
-            self.ui.pushButton_shotpub.clicked.connect(self.link_camera) # rendercam 폴더에 카메라 링크
+            self.ui.pushButton_shotpub.clicked.connect(self.link_camera) # Link camera to 'rendercam' directory
             self.ui.pushButton_shotpub.clicked.connect(self.open_folder)
             self.ui.pushButton_shotpub.clicked.connect(self.sg_status_update)
             self.ui.pushButton_shotpub.clicked.connect(self.sg_abc_pub_directory_update)
             self.ui.pushButton_shotpub.clicked.connect(self.sg_undistort_size_update)
 
-        elif user_task == 'ly': # layout은 mb, abc, camera를 export + link, sg status update, abc pub directory upload
+        elif user_task == 'ly':
             layout_clean_up_list = """
-Layout팀 클린업리스트\n
-- 장면 구성 요소의 정리 및 최적화
-- 객체 배치의 일관성 및 비율 조정
-- 카메라 앵글 및 구도 검토
-- 공간감과 깊이 표현의 정확성 확보
-- 배경과 주요 요소 간의 조화로운 배치
-- 애니메이션과 VFX 작업을 위한 여백 확보
-- 불필요한 요소 및 지오메트리 제거
-- 작업 파일 정리 및 문서화
+Layout Team Cleanup List\n
+- Organizing and optimizing scene components
+- Adjusting the consistency and proportion of object placement
+- Review camera angle and composition
+- Accuracy of spatial and depth expressions
+- Harmonious arrangement between background and key elements
+- Free space for animation and VFX work
+- Remove unnecessary elements and geometry
+- Organizing and documenting job files
             """ 
             self.ui.textEdit_shotcomment.setText(layout_clean_up_list)
-            self.ui.pushButton_shotpub.clicked.connect(self.make_pub_path) # 폴더 생성
+            self.ui.pushButton_shotpub.clicked.connect(self.make_pub_path)
             self.ui.pushButton_shotpub.clicked.connect(self.export_mb)
             self.ui.pushButton_shotpub.clicked.connect(self.export_alembic)
             self.ui.pushButton_shotpub.clicked.connect(self.export_camera_alembic)
@@ -176,20 +175,20 @@ Layout팀 클린업리스트\n
             self.ui.pushButton_shotpub.clicked.connect(self.sg_status_update)
             self.ui.pushButton_shotpub.clicked.connect(self.sg_abc_pub_directory_update)
 
-        elif user_task == 'ani': # Animation은 mb, abc, camera를 export + link, sg status update, abc pub directory upload
+        elif user_task == 'ani':
             ani_clean_up_list = """
-Animation팀 클린업리스트\n
-- 키프레임 간 움직임 부드럽게 조정 및 타이밍 최적화
-- 오버슈팅/언더슈팅 보정 및 동작의 연속성 확보
-- 얼굴 표정과 립싱크 미세 조정
-- 관절 변형 문제 해결 및 의상/헤어 시뮬레이션 개선
-- 무게감과 균형 조정, 2차 모션 추가 및 개선
-- 애니메이션과 카메라 움직임 동기화
-- 리깅 관련 문제 수정 및 충돌 감지/해결
-- 렌더링 최적화를 위한 애니메이션 조정
+Animation Team Cleanup List\n
+- Smooth adjustment and timing between keyframes
+- overshoot/undershoot correction and continuity of motion
+- Fine adjustment of facial expressions and lip sync
+- Resolving joint deformation problems and improving costume/hair simulation
+- Weight and balance, add and improve secondary motion
+- Synchronize animation and camera movement
+- Correcting and detecting/resolving issues related to rigging
+- Adjust animation for rendering optimization
             """
             self.ui.textEdit_shotcomment.setText(ani_clean_up_list)
-            self.ui.pushButton_shotpub.clicked.connect(self.make_pub_path) # 폴더 생성
+            self.ui.pushButton_shotpub.clicked.connect(self.make_pub_path)
             self.ui.pushButton_shotpub.clicked.connect(self.export_mb)
             self.ui.pushButton_shotpub.clicked.connect(self.export_alembic)
             self.ui.pushButton_shotpub.clicked.connect(self.export_camera_alembic)
@@ -199,22 +198,22 @@ Animation팀 클린업리스트\n
             self.ui.pushButton_shotpub.clicked.connect(self.sg_status_update)
             self.ui.pushButton_shotpub.clicked.connect(self.sg_abc_pub_directory_update)
 
-        elif user_task == 'lgt': # Lighting은 mb, abc, camera export + link, sg status update, abc pub directory upload
+        elif user_task == 'lgt':
             lgt_clean_up_list = """
-Lighting팀 클린업리스트\n
-- 불필요한 라이트 제거 및 라이트 강도/색상 미세 조정
-- 그림자 품질 개선 및 환경 조명(HDRI, GI) 최적화
-- 불필요한 렌더 레이어 제거 및 렌더 패스 구조 정리
-- 셰이더 및 텍스처 속성 미세 조정, 품질 확인
-- 반사, 굴절, 앰비언트 오클루전 효과 개선
-- 렌더 요소 간 일관성 확보 및 알파 채널/마스크 확인
-- 볼류메트릭 라이팅, 발광 효과, 렌즈 플레어 정제
-- 전체적인 렌더 설정 최적화 및 렌더 시간 단축
+Lighting Team Cleanup List\n
+- Unnecessary light removal and light intensity/color fine-tuning
+- Improve shadow quality and optimize environmental lighting (HDRI, GI)
+- Remove unnecessary render layers and organize render path structures
+- Shader and Texture Properties Fine-tuning, Quality Check
+- Improve reflection, refraction, and ambient occlusion effects
+- Ensure consistency between render elements and check alpha channel/mask
+- Volumetric lighting, luminescence effect, lens flare purification
+- Optimizing overall render settings and reducing render time
             """
             self.ui.textEdit_shotcomment.setText(lgt_clean_up_list)
             self.ui.pushButton_shotpub.setText("Publish")
 
-            self.ui.pushButton_shotpub.clicked.connect(self.make_pub_path) # 폴더 생성
+            self.ui.pushButton_shotpub.clicked.connect(self.make_pub_path)
             self.ui.pushButton_shotpub.clicked.connect(self.export_mb)
 
             #수정
@@ -227,19 +226,22 @@ Lighting팀 클린업리스트\n
 
 
         else: # user_task in ["mod", "lkd", "rig", "fx", "comp"]:
-            QMessageBox.about(self, "경고", "'Shot Publish'는 maya를 사용하는 Shot 작업에서만 실행할 수 있습니다.\n현재 작업 중인 내용을 확인해주세요 ")
+            QMessageBox.about(self, "Warning", "'Shot Publish' can only be run on Shot tasks using Maya.\nPlease check what you're working on")
 
 
 
-    def make_pub_path(self): # 'cache','scenes','images','sourceimages' 경로 생성
+    def make_pub_path(self): 
+        """
+        Create 'cache','scenes','images','sourceimages' directories.
+        """
         if not self.current_file_path:
-            QMessageBox.about(self, "경고", "파일이 저장되지 않았더나 열리지 않았습니다.")
+            QMessageBox.about(self, "Warning", "The file was not saved or opened.")
 
-        project = self.get_project() #Marvelous
-        seq_name = self.get_seq_name() #FCG
-        seq_number = self.get_seq_number() #FCG_0010
-        task = self.get_shot_task() #lgt
-        version = self.get_shot_version() #v001
+        project = self.get_project() # Marvelous
+        seq_name = self.get_seq_name() # FCG
+        seq_number = self.get_seq_number() # FCG_0010
+        task = self.get_shot_task() # lgt
+        version = self.get_shot_version() # v001
 
         self.open_pub_path = f"/home/rapa/pub/{project}/seq/{seq_name}/{seq_number}/{task}/pub/"
 
@@ -248,35 +250,37 @@ Lighting팀 클린업리스트\n
         for folder in folder_list:
             folder_path = os.path.join(self.open_pub_path, folder, version)
 
-            if not os.path.exists(folder_path): # 경로가 없을 때 폴더 생성
+            if not os.path.exists(folder_path): # Create a folder when there is no path
                 try:
                     os.makedirs(folder_path, exist_ok=True)
                     created_folders.append(folder_path)
 
                 except OSError as e: 
-                    QMessageBox.about(self, "경고", f"경로 생성 중 오류 발생 : {str(e)}")
-        print (f"{self.open_pub_path}하위의\n'cache','scenes','images','sourceimages'경로가 성공적으로 생성되었습니다.")
+                    QMessageBox.about(self, "Warning", f"Error creating path : {str(e)}")
+        print (f"Under {self.open_pub_path}\nPath 'cache', 'scenes', 'images', 'sourceimages' was successfully created.")
 
-    def open_folder(self): # 생성된 폴더 오픈
+    def open_folder(self): # Open created Directory
         if hasattr(self, 'open_pub_path') and os.path.exists(self.open_pub_path):
             subprocess.call(["xdg-open", self.open_pub_path])
         else:
-            QMessageBox.warning(self, "경고", "존재하지 않는 경로입니다.")
+            QMessageBox.warning(self, "Warning", "Path that does not exist.")
 
 
 
 # Export
-    def get_root_nodes(self): # 카메라를 제외한 최상위의 그룹 이름을 only_assemblies 리스트로 리턴
+    def get_root_nodes(self):
         """
-        씬의 최상위 노드를 찾아서 only_assemblies 리스트에 넣는다
+        Return top group name except camera to only_assemblies list
         """
-        assemblies = cmds.ls(assemblies=True)
-        camera_shapes = cmds.ls(cameras=True)
-        cameras = cmds.listRelatives(camera_shapes, parent=True)
+        assemblies, cameras = self.maya_api.get_root_nodes()
         only_assemblies = list(set(assemblies) - set(cameras))
         return only_assemblies
 
-    def export_mb(self): # scenes/v001 생성, 카메라를 포함한 씬 전체를 export (완료)
+    def export_mb(self):
+        """
+        Create a scenes/v001
+        Export the entire scene including the camera
+        """
 
         project = self.get_project() # Marvelous
         seq_name = self.get_seq_name() # FCG
@@ -287,24 +291,23 @@ Lighting팀 클린업리스트\n
         self.open_pub_path=f"/home/rapa/pub/{project}/seq/{seq_name}/{seq_number}/{task}/pub/"
         self.pub_path = os.path.join(self.open_pub_path, 'scenes', version)
 
-        # mb 파일 경로
+        # mb file path
         mb_file_path = os.path.join(self.open_pub_path, 'scenes', version, f'{seq_number}_{task}_{version}.mb')
 
         # Validate
         if os.path.exists(mb_file_path):
-            print (f'MB 파일 {mb_file_path}가 이미 존재합니다. Export를 취소합니다.')
+            print (f"MB file {mb_file_path} already exists. Cancel export.")
             return
 
         try:
-            cmds.file(rename=mb_file_path)
-            cmds.file(mb_file_path, exportAll=True, type="mayaBinary", force=True) #mb 파일은 생성자체가 안됨. 오류... type="mayaBinary"
-            print(f"MB 파일이 성공적으로 내보내졌습니다: {mb_file_path}")
+            self.maya_api.export_mb(mb_file_path)
+            print(f"MB file exported successfully : {mb_file_path}")
         except Exception as e:
-            print(f"MB 파일 내보내기 중 오류 발생: {str(e)}")
+            print(f"Error exporting MB file : {str(e)}")
             error_msg_box = QMessageBox()
             error_msg_box.setIcon(QMessageBox.Critical)
-            error_msg_box.setText(f"'{mb_file_path}'생성 중 오류 발생 : {str(e)}")
-            error_msg_box.setWindowTitle("파일 내보내기 실패")
+            error_msg_box.setText(f"Error creating '{mb_file_path}' : {str(e)}")
+            error_msg_box.setWindowTitle("File Export Failed")
             error_msg_box.setStandardButtons(QMessageBox.Ok)
             error_msg_box.exec()      
 
