@@ -32,7 +32,7 @@ class ShotPublish(QWidget):
 
         self.sg_api = ShotgunApi()
         self.maya_api = MayaApi()
-        
+        self.get_env_info()
         self.make_ui()
         self.sg_api.connect_sg()
 
@@ -46,6 +46,16 @@ class ShotPublish(QWidget):
         self.classify_task()
 
         self.ui.pushButton_shotpub.clicked.connect(self.get_root_nodes)
+    def get_env_info(self):
+        from dotenv import load_dotenv
+
+        load_dotenv()  # read .env file
+
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
 
     def make_ui(self):
         """
@@ -421,7 +431,7 @@ Lighting Team Cleanup List\n
         Extract the version number from the current file name, and create a folder path for the current version and the version with -1 applied from that version.
         """
         current_version = self.extract_version_folder_name(file_name)
-        if current_version is not None:
+        if current_version:
             current_version_folder = os.path.join(base_folder, f"v{current_version:03d}")
             previous_version_folder = os.path.join(base_folder, f"v{current_version - 1:03d}")
             

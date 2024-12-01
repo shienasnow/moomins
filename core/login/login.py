@@ -7,15 +7,14 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtCore import QFile, QTimer, Qt
 from PySide6.QtGui import QPixmap, QGuiApplication
 
-sys.path.append("/home/rapa/git/pipeline/api_scripts")
 from shotgun_api import ShotgunApi
+from pathlib import Path
 
 
 class Login(QWidget):
 
     def __init__(self):
         super().__init__()
-
         self.sg_cls = ShotgunApi()
 
         self.make_ui()
@@ -69,11 +68,13 @@ class Login(QWidget):
             self.get_shotgrid_email(input_id, input_pw)
 
     def get_shotgrid_email(self, input_id, input_pw):
-        # If shotgrid Info correct Input Info => get_dept
-        # Access password to id  (Issue & redeem Autodesk tokens, Make Legacy Login PW)
-        # a = shotgun.Shotgun(URL, input_id, input_pw) # API calls reflect the user's permissions as they are
-        # user = a.authenticate_human_user(input_id, input_pw)
-        # => Check the user's credentials and return user information if the user is valid
+        """
+        If shotgrid Info correct Input Info => get_dept
+        Access password to id  (Issue & redeem Autodesk tokens, Make Legacy Login PW)
+        a = shotgun.Shotgun(URL, input_id, input_pw) # API calls reflect the user's permissions as they are
+        user = a.authenticate_human_user(input_id, input_pw)
+        => Check the user's credentials and return user information if the user is valid
+        """
         user = self.sg_cls.get_shotgrid_email(input_id, input_pw)
 
         # if have not Info in shotgrid
@@ -94,6 +95,8 @@ class Login(QWidget):
 
         shotgrid_email = user["login"]
         shotgrid_id = user["id"]
+
+        self.set_envrion(shotgrid_id)
 
         if shotgrid_email == input_id:
             datas = self.sg_cls.get_dept(shotgrid_id)
@@ -182,8 +185,18 @@ class Login(QWidget):
             shot_window = shot_loader.ShotLoader(user_id)
             shot_window.show()
             win.close()
+    def create_env_file(self,user_id):
+        context = ""
+        root_path = Path(__file__).parent
+        context += f"USER_ID={user_id}\n"
+        context += f"ROOT={root_path}\n"
+        env_file_path = root_path / ".env"
+        try:
+            with open(env_file_path,"w") as f:
+                f.write(context)
+        except Exception as e:
+            print(e)
 
-        os.environ["USER_ID"] = user_id
 
 
 if __name__ == "__main__":

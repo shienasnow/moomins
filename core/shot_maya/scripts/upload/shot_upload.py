@@ -37,7 +37,7 @@ class ShotUpload(QWidget):
         super().__init__()
         self.sg_api = ShotgunApi()
         self.maya_api = MayaApi()
-
+        self.get_env_info()
         self.connect_sg()
         self.make_ui()
         self.set_text_label()
@@ -121,6 +121,16 @@ class ShotUpload(QWidget):
         self.ui.pushButton_upload.clicked.connect(self.sg_thumbnail_upload)
         self.ui.pushButton_upload.clicked.connect(self.sg_mov_upload)
 
+    def get_env_info(self):
+        from dotenv import load_dotenv
+
+        load_dotenv()  # read .env file
+
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
 
 
     def push_render_button(self):   # 카메라가 생성되고 오브젝트 그룹이 잡히면서 키만 들어가야한다.
@@ -396,15 +406,6 @@ class ShotUpload(QWidget):
                                 API_KEY)
 
     def get_artist_name(self):
-        print("loader에서 전달 받은 아티스트 id로 이름 가져오기")
-        try:
-            self.user_id = os.environ["USER_ID"]
-            # Loader를 통해서 마야를 실행했을 때 터미널에 남아 있음
-            # (loader에서 publish, upload, import로 user_id 전달)
-            print(self.user_id)
-        except:
-            self.user_id = 121
-        
         filter = [["id", "is", self.user_id]]
         field = ["name"]
         artist_info = self.sg.find_one("HumanUser", filters=filter, fields=field)

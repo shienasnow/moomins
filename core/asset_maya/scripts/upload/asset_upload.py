@@ -35,13 +35,24 @@ class AssetUpload(QWidget):
     def __init__(self,parent=None):
         super(AssetUpload, self).__init__(parent)
         self.camera_transform = None
-        
+        self.get_env_info()
         self.connect_sg()
         self.make_ui()
         self.set_input_path()
         self.set_text_label()
         self.event_func()
 
+
+    def get_env_info(self):
+        from dotenv import load_dotenv
+
+        load_dotenv() # read .env file
+
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
 
     def set_input_path(self):
         """
@@ -479,15 +490,7 @@ class AssetUpload(QWidget):
                                 SCRIPT_NAME,
                                 API_KEY)
 
-    def get_artist_name(self): ################################## self.user_id = os.environ["USER_ID"] 확인 필요
-        print("loader에서 전달 받은 아티스트 id로 이름 가져오기")
-        try:
-            self.user_id = os.environ["USER_ID"]
-            # Loader를 통해서 마야를 실행했을 때 터미널에 남아 있음
-            # (loader에서 publish, upload, import로 user_id 전달)
-            print(self.user_id)
-        except:
-            self.user_id = 105
+    def get_artist_name(self):
 
         filter = [["id", "is", self.user_id]]
         field = ["name"]

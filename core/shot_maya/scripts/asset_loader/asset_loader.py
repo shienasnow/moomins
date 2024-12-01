@@ -34,18 +34,15 @@ class AssetLoader(QWidget):
     def __init__(self, user_id):
         super().__init__()
 
-        self.user_id = user_id
-
+        self.get_env_info()
         self.sg_api = ShotgunApi
         self.maya_api = MayaApi
-        self.sg_api.get_datas_by_user_id(self.user_id)
-        self.get_user_id() # When you run Maya through Loader, you get the user_id in the terminal and find the user_name.
 
         self.make_ui()
         self.event_func() # Event Function Collection
 
         self.get_shot_info_from_current_directory() # Extract data from the current working file path.
-        self.current_dict = self.self.maya_api.get_reference_assets() # reference asset name, path in the current scene.
+        self.current_dict = self.maya_api.get_reference_assets() # reference asset name, path in the current scene.
         self.classify_task() # Pass tasks to classyfy_task functions so that different functions can be executed by task.
         self.compare_assets()
 
@@ -60,19 +57,21 @@ class AssetLoader(QWidget):
         self.ui.pushButton_import.clicked.connect(self.get_checked_row) # If you click the Import button, import the asset of the selected list.
         self.ui.pushButton_refresh.clicked.connect(self.refresh_sg) # Refresh shot grid interworking by pressing the Refresh button.
 
+    def get_env_info(self):
+        from dotenv import load_dotenv
 
+        load_dotenv()  # read .env file
 
-    def get_user_id(self): # Get user_id when you run Maya through Loader.
-        try:
-            self.user_id = os.environ["USER_ID"] # Forward "user_id" from loader to "publish", "upload", "asset loader".
-        except:
-            QMessageBox.about(self, "Warning", "Not a valid user")
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
 
     def get_user_name(self):
         # Find user_name with user_id
         user_datas = self.sg_api.get_datas_by_user_id(self.user_id)
-        user_name = user_datas["name"]
-        self.user_name = user_name
+        self.user_name = user_datas["name"]
 
     def get_shot_info_from_current_directory(self): # Extract project, seq_name, seq_num, task, version, shot_id.
 
