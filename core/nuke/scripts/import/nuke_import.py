@@ -30,8 +30,7 @@ class NukeImport(QWidget):
         self.sg_cls = ShotgunApi()
         self.nuke_api = NukeApi()
         self.make_ui()
-        # self.user_id = 94 # 임시
-        # __init__(user_id) 받아서 self.user_id = user_id
+        self.get_env_info()
         self.current_shot_info()
         self.make_table_ui() # ini 파일 받아서 ui에 넣기
 
@@ -69,6 +68,17 @@ class NukeImport(QWidget):
         cp = QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+
+    def get_env_info(self):
+        from dotenv import load_dotenv
+
+        load_dotenv()  # read .env file
+
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
 
 
     def current_shot_info(self):
@@ -110,7 +120,7 @@ class NukeImport(QWidget):
         self.ui.label_frame_range.setText(frame_range_str)
 
     def set_duedate(self):
-        due_date = self.sg_cls.get_shot_due_date_to_seq_num(94,self.seq_num)
+        due_date = self.sg_cls.get_shot_due_date_to_seq_num(self.user_id,self.seq_num)
         due_date_str = f"Due Date : {due_date}"
         self.ui.label_due_date.setText(due_date_str)
         self.add_row_datas()
@@ -159,7 +169,7 @@ class NukeImport(QWidget):
             elif key == "sg_cut_out":
                 end_frame = value
         for key,value in datas_list[0].items():
-            if key == "task_assignees":  #  value = [{'id': 94, 'name': '주석 박', 'type': 'HumanUser'}]
+            if key == "task_assignees":
                 for i,j in value[0].items():
                     if i == "name":
                         name = j
@@ -203,17 +213,8 @@ class NukeImport(QWidget):
         '''
         if get file type return file type image path
         '''
-        sourceimages_ini_file_path = os.path.join(self.dir_path,"sourceimages.ini")
-        config = ConfigParser()
-        config.optionxform = str
-        if not os.path.exists(sourceimages_ini_file_path):
-            raise FileNotFoundError(f"{sourceimages_ini_file_path} is None File")
-        config.read(sourceimages_ini_file_path,encoding='utf-8')
-        icon_name = f"{file_type}_icon"
-        if icon_name not in config["icons"]:
-            raise KeyError(f"{icon_name} is None Key")
-        image_path = config["icons"][icon_name]
-        return image_path
+
+        return self.image_path + f".{file_type}.png"
 
 
     def table_ui_contents(self,file_name,version,task,ext,name,date,frame_range,status,full_path):

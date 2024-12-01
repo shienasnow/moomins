@@ -19,9 +19,9 @@ class NukePublish(QWidget):
     def __init__(self):
         super().__init__()
         self.nuke_api = NukeApi()
-        self.dir_path = os.path.dirname(__file__)
+        self.get_env_info()
         ui_file_name = "nuke_publish.ui"
-        ui_file_path = f"{self.dir_path}/{ui_file_name}"
+        ui_file_path = f"{os.path.dirname(__file__)}/{ui_file_name}"
         ui_file = QFile(ui_file_path)
         ui_file.open(QFile.ReadOnly)
         loader = QUiLoader()                                      
@@ -41,6 +41,16 @@ class NukePublish(QWidget):
         cp = QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+    def get_env_info(self):
+        from dotenv import load_dotenv
+
+        load_dotenv()  # read .env file
+
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
 
     def node_info(self):
         nodes = self.nuke_api.get_selected_nodes()

@@ -27,7 +27,7 @@ class AssetPublish(QWidget):
     def __init__(self):
         super().__init__()
         self.make_ui()
-        self.connect_sg()
+        self.get_env_info()
         self.setText_labels()
         self.classify_task()
         self.ui.pushButton_pub.clicked.connect(self.get_root_nodes)
@@ -51,15 +51,16 @@ class AssetPublish(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    def connect_sg(self):
-        URL = "https://4thacademy.shotgrid.autodesk.com"
-        SCRIPT_NAME = "moomins_key"
-        API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
+    def get_env_info(self):
+        from dotenv import load_dotenv
 
-        self.sg = shotgun.Shotgun(URL,
-                            SCRIPT_NAME,
-                            API_KEY)
+        load_dotenv() # read .env file
 
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
 # import data
     @property
     def file_path(self): # 현재 작업 파일의 경로 가져오기
@@ -650,9 +651,9 @@ Rigging팀 클린업리스트\n
 
         print(f"task id : {task_id}의 status를 'fin'으로 업데이트합니다.")
         # self.ui.label_status.setText("fin")
-        image_path = "/home/rapa/git/pipeline/sourceimages/fin.png"
 
-        pixmap = QPixmap(image_path)
+
+        pixmap = QPixmap(self.image_path + "/fin.png")
         scaled_pixmap = pixmap.scaled(30, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.ui.label_status.setPixmap(scaled_pixmap)
         self.ui.label_status.setAlignment(Qt.AlignHCenter | Qt.AlignTop)

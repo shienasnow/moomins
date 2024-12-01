@@ -182,7 +182,6 @@ class ShotgunApi:
     def get_shot_due_date_to_seq_num(self, user_id, seq_num):
         user_data = self.get_datas_by_id(user_id)  
 
-        # shot_user_id = 94
         shot_user_id = user_data["id"]
         user_name = user_data["name"]
 

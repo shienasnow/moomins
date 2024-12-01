@@ -5,6 +5,7 @@ import re
 import shutil
 import threading
 from configparser import ConfigParser
+
 from PySide6.QtWidgets import (
 QWidget,QApplication,QTreeWidgetItem,
 QMenu,QWidgetAction,QGridLayout,
@@ -23,9 +24,9 @@ from shotgun_api import ShotgunApi
 
 class AssetLoader(QWidget):
 
-    def __init__(self, user_id):
+    def __init__(self):
         super().__init__()
-        self.user_id = user_id
+        self.get_env_info()
         self.sg_cls = ShotgunApi()
         self.get_assgined_user_project_by_task()
         self.installEventFilter(self)
@@ -50,6 +51,15 @@ class AssetLoader(QWidget):
         cp = QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+    def get_env_info(self):
+        from dotenv import load_dotenv
+
+        load_dotenv() # read .env file
+
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+
 
     def get_assgined_user_project_by_task(self):
         user_tasks_data = self.sg_cls.get_task_data(self.user_id)
@@ -407,7 +417,8 @@ class AssetLoader(QWidget):
         self.sg_cls.sg_status_update()
         
     def run_maya(self,add_file_path):
-        process = subprocess.Popen(["/bin/bash", "-i", "-c", f'asset_maya {add_file_path}'],start_new_session=True)
+        process = subprocess.Popen(["/bin/bash", "-i", "-c", f'asset_maya {add_file_path}'],
+                                   start_new_session=True,)
         try:
             # Wait for finished Maya
             process.wait()

@@ -29,9 +29,9 @@ class NukeUpload(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.user_id = os.environ["USER_ID"]
         self.sg_api = ShotgunApi()
         self.nuke_api = NukeApi()
+        self.get_env_info()
 
         # Make UI
         my_path = os.path.dirname(__file__)
@@ -64,6 +64,16 @@ class NukeUpload(QWidget):
         cp = QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+    def get_env_info(self):
+        from dotenv import load_dotenv
+
+        load_dotenv()  # read .env file
+
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
 
     def check_before_open_ui(self):
         nodes = self.nuke_api.get_selected_nodes()

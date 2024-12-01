@@ -29,14 +29,11 @@ from moomins.api_scripts.maya_api import MayaApi
 
 class ShotLoader (QWidget):
 
-    def __init__(self, user_id=None):
+    def __init__(self, ):
         super().__init__()
 
         self.sg_api = ShotgunApi()
         self.maya_api = MayaApi()
-
-        self.user_id = user_id
-        self.sg_api.get_datas_by_id(self.user_id)
 
         self.make_ui()
 
@@ -78,7 +75,20 @@ class ShotLoader (QWidget):
         self.table.customContextMenuRequested.connect(self.click_right_menu) # Table Widget Right-Click
         self.ui.listWidget.itemDoubleClicked.connect(self.double_clicked_item) # List Widget Double-Click
         self.ui.pushButton.clicked.connect(self.refresh) # Refresh Button
-     
+
+    def get_env_info(self):
+        from dotenv import load_dotenv
+
+        load_dotenv()  # read .env file
+
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
+
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
+
+
+
     def get_task_data(self):
         """
         Get data from the task and organize it into the dictionary
