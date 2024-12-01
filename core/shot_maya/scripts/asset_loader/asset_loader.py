@@ -94,26 +94,26 @@ class AssetLoader(QWidget):
 
 # Task(ly, any, lgt) Run another function that separates and creates ini.
     def classify_task(self):
-        print(f"현재 작업 Task : {self.task}")
+        print(f"Current Task : {self.task}")
 
         if self.task == "ly":
-            print("레이아웃 작업을 시작합니다.\nlkd 또는 rig asset과 rendercam Import하세요.")
-            self.get_ly_assigned_assets() # seq num에 부여된 asset들의 정보들을 찾아서 ini를 만든다.
-            self.make_table_ui_for_ly() # ini 파일 받아서 ui에 넣기
+            print("Start the layout task.\nLoad rig or lookdev assets and render cam")
+            self.get_ly_assigned_assets() # Find the information of the assets assigned to sequence number and make ini.
+            self.make_table_ui_for_ly() # Get ini and put it in UI.
 
         elif self.task == "ani":
-            print("애니메이션 작업을 시작합니다.\nly과 rendercam Import하세요.")
-            self.get_lgt_assgined_assets() # seq num가 같은 ly, ani, fx task의 정보들을 찾아서 ini를 만든다.
+            print("Start the animation task.\nLoad layout assets and render cam.")
+            self.get_lgt_assgined_assets() # Find the information of the ly, ani, and fx tasks with the same sequence number and make ini.
             self.make_table_ui_for_ani()
 
         elif self.task == "lgt":
-            print("라이팅 작업을 시작합니다.\nly, ani, fx, rendercam Import하세요.")
-            self.get_lgt_assgined_assets() # seq num가 같은 ly, ani, fx task의 정보들을 찾아서 ini를 만든다.
+            print("Start the lighting task.\nLoad layout, animation, fx assets and render cam.")
+            self.get_lgt_assgined_assets()
             self.make_table_ui_for_lgt()
 
-        else: # Maya Shot 작업자가(ly, ani, lgt) 아닌 경우 아무것도 할 수 없도록
-            print("마야에서 에셋을 import할 수 있는 작업 상태가 아닙니다.")
-            QMessageBox.about(self, "경고", "'Import Assets'는 maya를 사용하는 Shot 작업에서만 실행할 수 있습니다.\n현재 작업 중인 task를 확인해주세요.")
+        else: # Prevent working if you are not a Shot Maya worker
+            print("You are not in a working status to load an asset from Maya.")
+            QMessageBox.about(self, "Warning", "'Load Assets' can only be run on Shot jobs using Maya.\nPlease check the task you are working on.")
 
 
 
