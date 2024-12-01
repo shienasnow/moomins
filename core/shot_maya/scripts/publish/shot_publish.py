@@ -3,8 +3,6 @@ import os
 import sys
 import re
 import shutil
-sys.path.append("/home/rapa/git/pipeline/api_scripts")
-sys.path.append("/usr/local/lib/python3.6/site-packages")
 import subprocess
 from shiboken2 import wrapInstance
 
@@ -22,6 +20,9 @@ except:
 
 from moomins.api_scripts.shotgun_api import ShotgunApi
 from moomins.api_scripts.maya_api import MayaApi
+
+sys.path.append("/home/rapa/git/pipeline/api_scripts")
+sys.path.append("/usr/local/lib/python3.6/site-packages")
 
 
 class ShotPublish(QWidget):
@@ -69,10 +70,12 @@ class ShotPublish(QWidget):
                         SCRIPT_NAME,
                         API_KEY)
 
-# Path to the shot file you are working on
+
+    # Path to the shot file you are working on
     def get_current_file_path(self): 
         self.current_file_path = maya_api.get_current_maya_file_path()
         return self.current_file_path
+
 
     # Get information through the path
     def get_project(self):
@@ -267,7 +270,7 @@ Lighting Team Cleanup List\n
 
 
 
-# Export
+    # Export
     def get_root_nodes(self):
         """
         Return top group name except camera to only_assemblies list
@@ -311,7 +314,7 @@ Lighting Team Cleanup List\n
             error_msg_box.setStandardButtons(QMessageBox.Ok)
             error_msg_box.exec()      
 
-    def export_alembic(self): # cache/v001이 생성, 카메라 제외한 abc export (완료)
+    def export_alembic(self): # Create cache/v001, Export abc excluding camera.
 
         project = self.get_project() #Marvelous
         seq_name = self.get_seq_name() #FCG
@@ -322,17 +325,17 @@ Lighting Team Cleanup List\n
         self.open_pub_path=f"/home/rapa/pub/{project}/seq/{seq_name}/{seq_number}/{task}/pub/"
         self.pub_path = os.path.join(self.open_pub_path, 'cache', version)
 
-        # Alembic 파일 경로
+        # Alembic file path
         abc_file_path = os.path.join(self.open_pub_path, 'cache', version, f'{seq_number}_{task}_{version}.abc')
 
         # Validate
         if os.path.exists(abc_file_path):
-            print (f'ABC 파일 {abc_file_path}가 이미 존재합니다. Export를 취소합니다.')
+            print (f'ABC file {abc_file_path} is already exist. Cancel the Export.')
             return
 
         root_nodes = self.get_root_nodes()
         if not root_nodes:
-            print ('내보낼 root 노드가 없습니다.')
+            print ('No root node to export.')
             return
         cmds.select(root_nodes, replace=True)
 
@@ -346,18 +349,18 @@ Lighting Team Cleanup List\n
 
         try:
             cmds.AbcExport(j=abc_export_cmd)
-            print (f'Alembic 파일이 성공적으로 Export 되었습니다.: {abc_file_path}')
+            print (f'The Alembic file was successfully exported.: {abc_file_path}')
 
         except Exception as e:
-            print (f"Alembic Export 오류 발생 : {str(e)}")
+            print (f"Alembic Export Error : {str(e)}")
             error_msg_box = QMessageBox()
             error_msg_box.setIcon(QMessageBox.Critical)
-            error_msg_box.setText(f"'{abc_file_path}'생성 중 오류 발생 : {str(e)}")
-            error_msg_box.setWindowTitle("파일 내보내기 실패")
+            error_msg_box.setText(f"Error during creation '{abc_file_path}' : {str(e)}")
+            error_msg_box.setWindowTitle("File Export Failed")
             error_msg_box.setStandardButtons(QMessageBox.Ok)
             error_msg_box.exec()
 
-    def export_camera_alembic(self): # cache/v001 안에 camera abc export (완료)
+    def export_camera_alembic(self): # cache/v001 안에 camera abc export
         # camera = self.get_camera_names() # camera1
 
         project = self.get_project() # Marvelous
@@ -370,7 +373,7 @@ Lighting Team Cleanup List\n
         self.pub_path = os.path.join(self.open_pub_path,'cache',version)
         camera_file_path = os.path.join(self.open_pub_path,'cache',version,f'{seq_number}_{task}_cam.abc')
 
-        # 카메라 노드만 선택
+        # Select camera node only
         camera_list = []
         camera_shapes = cmds.ls(type='camera')
         cameras = cmds.listRelatives(camera_shapes, parent=True)
@@ -379,78 +382,76 @@ Lighting Team Cleanup List\n
                 continue
             camera_list.append(camera)
         if len(camera_list) > 1:
-            QMessageBox.about(self, "경고", "현재 씬에 카메라가 2개 이상입니다.\n현재 시퀀스용 카메라만 남겨주세요.")
+            QMessageBox.about(self, "Warning", "There are at least two cameras in the current scene.\nPlease leave the camera for the current sequence.")
             return
         camera1 = camera_list[0] # camera1
 
-        # Alembic 내보내기 명령어 설정
+        # Setting Alembic Export Commands
         start_frame = cmds.playbackOptions(q=True, min=True)
         end_frame = cmds.playbackOptions(q=True, max=True)
 
-        # Alemic export 명령어 생성
+        # Generating Alemic export commands
         abc_export_cmd = '-frameRange {} {} -dataFormat ogawa -root {} -file "{}"'.format(
         start_frame-10, end_frame+10, camera1, camera_file_path)
 
         print (abc_export_cmd)
-        # Alembic 내보내기 실행
+        # Execute Alembic Export
         try:
             cmds.AbcExport(j=abc_export_cmd)
-            print (f'Alembic 파일이 성공적으로 Export 되었습니다.: {camera_file_path}')
+            print (f'The Alembic file was successfully exported.\nFile path : {camera_file_path}')
 
         except Exception as e:
-            print (f"Alembic Export 오류 발생 : {str(e)}")
+            print (f"Alembic Export Error : {str(e)}")
 
         return camera_file_path
    
-   ################################### 수정 #########################################
 
 
     def extract_version(self, file_path):
         """
-        파일 경로에서 버전 번호를 추출합니다.
+        Extract the version number from the file path.
         """
-        match = re.search(r'v(\d{3})', file_path)  # 'vXXX' 형식에서 숫자만 추출
+        match = re.search(r'v(\d{3})', file_path)  # Extract only numbers from 'vXXX' format
         if match:
-            return match.group(1)    # 패턴에 맞는 전체 문자열을 반환합니다.
+            return match.group(1)    # Returns the entire string that matches the pattern.
 
     def set_image_size(self, width, height):
         """
-        Maya 렌더 설정에서 이미지 크기를 변경합니다.
+        Change the image size in Maya render settings.
 
-        :param width: 렌더링 이미지의 너비
-        :param height: 렌더링 이미지의 높이
+        :param width: Width of the rendering image
+        :param height: Height of the rendering image
         """
-        # 'defaultResolution' 노드에 접근합니다.
+        # Access the 'defaultResolution' node.
         default_resolution = 'defaultResolution'
         
-        # 이미지 크기를 설정합니다.
+        # Sets the image size.
         cmds.setAttr(f"{default_resolution}.width", width)
         cmds.setAttr(f"{default_resolution}.height", height)
 
 
     def export_exr(self):
 
-        # Arnold 플러그인 로드
+        # Load Arnold Plug-in
         if not cmds.pluginInfo('mtoa', query=True, loaded=True):
             cmds.loadPlugin('mtoa')
         
-        # 마야 씬의 프레임 레인지 가져오기
+        # Import the frame range of Maya Scene
         start_frame = cmds.playbackOptions(q=True, min=True)
         end_frame = cmds.playbackOptions(q=True, max=True)
         
-        # Arnold 렌더러 설정
+        # Arnold renderer settings
         cmds.setAttr("defaultRenderGlobals.currentRenderer", "arnold", type="string")
         cmds.setAttr("defaultRenderGlobals.startFrame", start_frame)
         cmds.setAttr("defaultRenderGlobals.endFrame", end_frame)
 
-        # 렌더링에 사용할 카메라 설정
+        # Camera Settings for Rendering
         camera = self.get_camera_names()
         print(camera)
         if cmds.objExists(camera):
-            cmds.setAttr(f"{camera}.renderable", 1)  # 렌더 카메라 활성화 (1은 활성화, 0은 비활성화)
+            cmds.setAttr(f"{camera}.renderable", 1)  # Enable render camera (1 is enabled, 0 is disabled)
 
-        # 현재 열려 있는 파일의 경로를 가져옵니다.
-
+        # Gets the path to the currently open file.
         current_file = cmds.file(q=True, sceneName=True)
         images_path = current_file.replace("scenes", "images")
 
@@ -460,75 +461,77 @@ Lighting Team Cleanup List\n
         base_folder = '/'.join(file_path)
 
         
-        #언디스토션 사이즈
+        # Undistortion Size
         image_size = self.get_image_plane_coverage()
         camera_names = self.get_camera_names()
         
         image_size_width = int(image_size[camera_names]["width"]) 
         image_size_height = int(image_size[camera_names]["height"]) 
         
-        #이미지 사이즈 수정
+        # Image Size Settings
         self.set_image_size(image_size_width, image_size_height)        
         
         
-        # 파일 경로에서 버전 번호 추출
+        # Extract version number from file path.
         version = self.extract_version(current_file)
         ver = f"v{version}"
-        # 버전 폴더 생성
+
+        # Create a version folder
         self.version_folder = os.path.join(base_folder, ver)
         #/home/rapa/pub/Moomins/seq/AFT/AFT_0010/lgt/pub/images/v002
         
-        # 버전 폴더가 존재하지 않으면 생성
+        # Create a version folder if it does not exist.
         if not os.path.exists(self.version_folder):
             os.makedirs(self.version_folder)
 
-        # 모든 렌더 레이어를 렌더링 가능하도록 설정
+        # Enable rendering of all render layers.
         render_layers = cmds.ls(type="renderLayer")
         for layer in render_layers:
-            if cmds.getAttr(layer + ".renderable") == 1:  # 렌더링 가능한 레이어만 선택
+            if cmds.getAttr(layer + ".renderable") == 1:  # Select only renderingable layers.
                 cmds.editRenderLayerGlobals(currentRenderLayer=layer)
 
-                # 출력 경로 설정 - `<RenderLayer>` 토큰 추가
+                # Output path setting - '<RenderLayer>' token added
                 output_path = os.path.join(self.version_folder, "<RenderLayer>/<Scene>")
                 cmds.setAttr("defaultRenderGlobals.imageFilePrefix", output_path, type="string")
 
-                # Arnold 이미지 형식 설정
+                # Arnold Image Format Settings
                 cmds.setAttr("defaultArnoldDriver.aiTranslator", "exr", type="string")  # EXR 형식으로 설정
                 cmds.setAttr("defaultArnoldDriver.colorManagement", 1)  # ACES 색상 관리 활성화
 
-                # 렌더 옵션 설정
-                cmds.setAttr("defaultRenderGlobals.imageFormat", 7)  # EXR 형식
-                cmds.setAttr("defaultRenderGlobals.animation", 1)  # 애니메이션 활성화
-                cmds.setAttr("defaultRenderGlobals.useFrameExt", 1)  # 파일 이름에 프레임 포함
-                cmds.setAttr("defaultRenderGlobals.outFormatControl", 0)  # 기본 포맷 제어 비활성화
-                cmds.setAttr("defaultRenderGlobals.putFrameBeforeExt", 1)  # 파일 확장자 앞에 프레임 번호 삽입
-                cmds.setAttr("defaultRenderGlobals.extensionPadding", 4)  # 프레임 번호에 대해 패딩 4로 설정
+                # Setting render options
+                cmds.setAttr("defaultRenderGlobals.imageFormat", 7)  # EXR format
+                cmds.setAttr("defaultRenderGlobals.animation", 1)  # Activating Animation
+                cmds.setAttr("defaultRenderGlobals.useFrameExt", 1)  # Include a frame in the file name
+                cmds.setAttr("defaultRenderGlobals.outFormatControl", 0)  # Disable Default Format Control
+                cmds.setAttr("defaultRenderGlobals.putFrameBeforeExt", 1)  # Insert frame number before file extension
+                cmds.setAttr("defaultRenderGlobals.extensionPadding", 4)  # Set to Padding 4 for Frame Number
 
-                # 프레임 설정
+                # Setting Frame Range
                 render_first_frame = int(start_frame)
                 render_last_frame = int(end_frame)
                 
-                # 각 프레임별로 렌더링
+                # Rendering by each frame
                 for frame in range(render_first_frame, render_last_frame + 1):
-                    cmds.currentTime(frame)  # 프레임 설정
-                    # 렌더링 수행 (렌더 뷰 없이)
+                    # Frame Settings
+                    cmds.currentTime(frame)
+
+                    # Perform rendering (without render view)
                     cmds.arnoldRender(cam=camera, seq=(frame, frame), x=image_size_width, y=image_size_height)
 
                     
     def extract_version_folder_name(self,folder_name):
         """
-        폴더 이름에서 버전 번호를 추출합니다.
-        버전 번호는 'vXXX' 형식으로 되어 있다고 가정합니다.
+        Extract the version number from the folder name.
         """
         match = re.search(r'v(\d{3})', folder_name)
         if match:
-            return int(match.group(1))  # 정수로 변환하여 반환         
+            return int(match.group(1))
         
 
 
     def get_version_folders(self, base_folder, file_name):
         """
-        현재 파일 이름에서 버전 번호를 추출하고, 현재 버전과 해당 버전에서 -1을 적용한 버전의 폴더 경로를 생성합니다.
+        Extract the version number from the current file name, and create a folder path for the current version and the version with -1 applied from that version.
         """
         current_version = self.extract_version_folder_name(file_name)
         if current_version is not None:
@@ -540,57 +543,50 @@ Lighting Team Cleanup List\n
 
     def get_file_paths(self):
         """
-        현재 열려 있는 마야 파일의 경로를 기반으로 현재 버전과 이전 버전 경로를 반환합니다.
+        Returns the path of the current and previous versions based on the path of the currently open Maya file.
         """
-        # 현재 파일 및 경로 정보 가져오기
-        current_file = cmds.file(q=True, sceneName=True)  # 마야에서 현재 열려 있는 파일의 경로를 가져옵니다.
-        images_path = current_file.replace("scenes", "images")  # "scenes"를 "images"로 대체
+        # Get current file and path information
+        current_file = cmds.file(q=True, sceneName=True)  # Gets the path to the file that is currently open in Maya.
+        images_path = current_file.replace("scenes", "images")  # Replace "scenes" with "images".
         pub_path = images_path.replace("wip", "pub")
 
-        file_name = os.path.basename(pub_path)  # 파일 이름만 추출
-        file_path = os.path.dirname(pub_path)  # 파일의 디렉터리 이름을 가져옵니다.
+        file_name = os.path.basename(pub_path)  # Extract only the file name.
+        file_path = os.path.dirname(pub_path)  # Gets the directory name of the file.
         
-        base_folder = os.path.dirname(file_path)  # 경로를 슬래시로 분할하고, 마지막 부분을 제외
+        base_folder = os.path.dirname(file_path)  # Split the path into slashes, excluding the last part.
 
-        # 현재 버전(v002) 및 이전 버전 경로(v001)
+        # Return current version (v002) and previous version path (v001).
         current_version_folder, previous_version_folder = self.get_version_folders(base_folder, file_name)
         return current_version_folder, previous_version_folder
 
 
     def copy_folders(self):
 
-        #maya에서 경로가져오기
+        # Get path from maya.
         dest_dir, src_dir = self.get_file_paths()
 
-        # 현재 버전이 v001인 경우, 복사를 수행하지 않음
+        # If the current version is v001, do not copy.
         current_version = self.extract_version(os.path.basename(dest_dir))
         if current_version == 1:
-            print("복사 실행하지 않음")
             return
 
-        # 대상 디렉터리가 존재하지 않으면 생성
+        # Create a destination directory if it does not exist.
         if not os.path.exists(dest_dir):
             os.makedirs(dest_dir)
 
-        # 소스 디렉터리의 각 항목에 대해 반복
+        # Repeat for each item in the source directory.
         for item in os.listdir(src_dir):
             src_path = os.path.join(src_dir, item)
             dest_path = os.path.join(dest_dir, item)
 
-            # 항목이 디렉터리인지 확인
             if os.path.isdir(src_path):
-                # 대상 경로에 같은 이름의 디렉터리가 이미 존재하는지 확인
                 if not os.path.exists(dest_path):
-                    # 존재하지 않으면 폴더 복사
+                    # Copy folders if they don't exist.
                     shutil.copytree(src_path, dest_path)
 
-   ################################### 수정 #########################################
 
 
-
-
-    def link_camera(self): # 완료
-        print("****************** link camera")
+    def link_camera(self):
         project = self.get_project()
         seq_name = self.get_seq_name()
         seq_number = self.get_seq_number()
@@ -599,48 +595,44 @@ Lighting Team Cleanup List\n
         seq_cam_folder_path = f"/home/rapa/pub/{project}/seq/{seq_name}/{seq_number}/rendercam"
         seq_cam_file_name = f"{seq_number}_cam.abc" # OPN_0010_cam.abc
         seq_cam_path = os.path.join(seq_cam_folder_path, seq_cam_file_name)
-        # print(f"*****************{seq_cam_folder_path}")
-        # print(f"*****************{seq_cam_file_name}")
-        # print(f"*****************{seq_cam_path}")
-        # *****************/home/rapa/pub/Moomins/seq/AFT/AFT_0010/rendercam
-        # ***************** AFT_0010_cam.abc
-        # *****************/home/rapa/pub/Moomins/seq/AFT/AFT_0010/rendercam/AFT_0010_cam.abc
 
-        print("폴더를 만들어라")
-        if not os.path.exists(seq_cam_folder_path): # rendercam이 없으면 경로 생성
-            os.makedirs(seq_cam_folder_path) # 폴더 생성
+        print(f"{seq_cam_folder_path}") # /home/rapa/pub/Moomins/seq/AFT/AFT_0010/rendercam
+        print(f"{seq_cam_file_name}") # AFT_0010_cam.abc
+        print(f"{seq_cam_path}") # /home/rapa/pub/Moomins/seq/AFT/AFT_0010/rendercam/AFT_0010_cam.abc
 
-        # Rendercam에 Link
+
+        if not os.path.exists(seq_cam_folder_path): # Create a route if rendercam is not present.
+            os.makedirs(seq_cam_folder_path)
+
+        # Link to Rendercam
         task_list = ["mm","ly","ani"]
-        print("-----------------------dsfkldjfsdfljk")
         for task in task_list:
             cam_path = f"/home/rapa/pub/{project}/seq/{seq_name}/{seq_number}/{task}/pub/cache"
             cam_name = f"{seq_number}_{task}_cam.abc" # OPN_0010_ani_cam.abc
             cam_full_path = os.path.join(cam_path, cam_name)
 
             if os.path.exists(cam_full_path):
-                os.system(f"ln -s {cam_full_path} {seq_cam_path}") # ln -s 원본경로 심볼릭경로
-                print(f"{task} 카메라를 rendercam에 링크 완료했습니다!")
+                os.system(f"ln -s {cam_full_path} {seq_cam_path}") # ln -s "original path" "symbolic path"
+                print(f"You have linked your {task} camera to rendercam!")
 
 
 
-### Backend (효은)
-    def get_task_id(self): # 완료
-        # seq_num_id 구하기
+    def get_task_id(self):
+        # Get seq_num_id
         seq_num = self.get_seq_number()
-        seq_filter = [["code", "is", seq_num]] # 현재 작업 중인 시퀀스 넘버 ex.OPN_0010
+        seq_filter = [["code", "is", seq_num]] # Sequence number currently being worked on. ex.OPN_0010
         seq_field = ["id"]
         seq_info = self.sg.find_one("Shot", filters=seq_filter, fields=seq_field) # {'type': 'Asset', 'id': 1789}
         seq_num_id = seq_info["id"]
-        print(f"seq_num_id 찾기 : {seq_num_id}")
+        print(f"seq_num_id : {seq_num_id}")
 
-        # step_id 찾기
-        step_name = self.get_shot_task() # lgt, ly 등
+        # Get step_id
+        step_name = self.get_shot_task() # lgt, ly...
         step_info = self.sg.find_one("Step",[["code", "is", step_name]], ["id"])
         step_id = step_info["id"]
-        print(f"step id 찾기 : {step_id}")
+        print(f"step id : {step_id}")
 
-        # seq_num_id, step_id 조건에 맞는 task id 찾기
+        # find task id that meets seq_num_id, step_id condition.
         task_filter = [
             ["entity", "is", {"type": "Shot", "id": seq_num_id}],
             ["step", "is", {"type": "Step", "id": step_id}]
@@ -648,54 +640,52 @@ Lighting Team Cleanup List\n
         task_field = ["id"]
         task_info = self.sg.find_one("Task", filters=task_filter, fields=task_field)
         task_id = task_info["id"]
-        print(f"task id 찾기 : {task_id}")
+        print(f"task id : {task_id}")
 
         return task_id
 
-    def sg_status_update(self): # 완료
-        print("sg_status_update 함수 실행")
+    def sg_status_update(self):
 
         task_id = self.get_task_id()
         self.sg.update("Task", task_id, {"sg_status_list" : "pub"})
 
-        print(f"Task 엔티티에서 {task_id}의 status를 pub으로 업데이트합니다.")
+        print(f"Update the status of {task_id} to pub in the Task entity.")
 
-    def sg_abc_pub_directory_update(self): # 완료
-        print("pub된 abc 파일의 경로를 pub file directory 필드에 업로드합니다.")
+    def sg_abc_pub_directory_update(self):
+        print("Upload the path of the published abc file into the pub file directory field.")
         task_id = self.get_task_id()
         camera_path = self.export_camera_alembic()
         # /home/rapa/pub/Moomins/seq/AFT/AFT_0010/lgt/pub/cache/v001/AFT_0010_lgt_cam.abc
 
         self.sg.update("Task", task_id, {"sg_description" : camera_path})
 
-    def sg_pub_exr_directory_update(self): # export_exr함수 경로 확인 필요
-        print("pub된 exr 파일의 경로를 pub file directory 필드에 업로드합니다.")
+    def sg_pub_exr_directory_update(self):
+        print("Upload the path of the published exr file into the pub file directory field.")
         task_id = self.get_task_id()
         exr_path  = self.version_folder()
-        # print(exr_path)
 
         self.sg.update("Task", task_id, {"sg_description" : exr_path})
 
 
 
-    def get_camera_names(self): # 완료
+    def get_camera_names(self):
         """
-        마야 안에 기본 카메라는 제외한 카메라의 이름을 가져오는 코드
+        Get the name of the camera in Maya, excluding the Default camera
         """
-        # 기본 카메라 이름 리스트
+        # Default Camera Name List
         default_cameras = ["front", "persp", "side", "top"]
 
-        # 모든 카메라 노드 찾기
+        # Find all camera nodes
         all_cameras = cmds.ls(type='camera', long=True)
 
-        # 카메라의 부모 노드 이름을 가져옵니다.
+        # Gets the parent node name of the camera.
         camera_names = []
         for camera in all_cameras:
             parent_node = cmds.listRelatives(camera, parent=True, fullPath=True)
             if parent_node:
                 camera_names.append(parent_node[0])
 
-        # 기본 카메라 이름을 제외합니다.
+        # Exclude the default camera name.
         filtered_cameras = []
         for camera_name in camera_names:
             short_name = camera_name.split('|')[-1]
@@ -703,52 +693,51 @@ Lighting Team Cleanup List\n
                 filtered_cameras.append(short_name)
 
         if filtered_cameras:
-            # 필터링된 카메라 이름들을 문자열로 결합합니다.
+            # Combines filtered camera names into strings.
             camera_names_str = ', '.join(filtered_cameras)
-            print("아웃라이너에서 기본 카메라를 제외한 모든 카메라가 선택되었습니다.")
+            print("All cameras except the default ones have been selected in the outliner.")
 
-            # 카메라 이름을 문자열로 반환합니다.
             return camera_names_str
 
-    def sg_undistort_size_update(self): # mm의 카메라에서 나온 undistortion size를 sg에 업데이트 합니다. (완료)
+    def sg_undistort_size_update(self): # Update the undistortion size from the camera in the match move step to sg.
         undistortion_dict = self.get_image_plane_coverage()
         print(undistortion_dict)
         # {'camera1': {'width': 2040, 'height': 1220}}
         camera_names = self.get_camera_names()
         print(camera_names) # camera1
         
-        undistortion_width = str(undistortion_dict[camera_names]["width"]) # 2040 (스트링)
-        undistortion_height = str(undistortion_dict[camera_names]["height"]) # 1220 (스트링)
+        undistortion_width = str(undistortion_dict[camera_names]["width"]) # 2040 (str)
+        undistortion_height = str(undistortion_dict[camera_names]["height"]) # 1220 (str)
 
         shot_id = self.get_shot_id()
         print(shot_id) # 1353
 
-        # SG Shot 엔티티의 undistortion size 필드에 각각 업로드
+        # Upload each to the undistortion size field of the SG Shot entity.
         self.sg.update("Shot", shot_id, {"sg_undistortion_width" : undistortion_width,
                                          "sg_undistortion_height" : undistortion_height})
 
-    def get_image_plane_coverage(self): # 완료
+    def get_image_plane_coverage(self):
         """
-        카메라의 이미지플랜을 검색하고, coverage X, Y를 가져온다.
-        가져온 카메라이름과 coverage를 이중 딕셔너리로 묶는다
+        Search for the camera's image plan and get coverage X and Y.
+        Group the imported camera name and coverage into a double dictionary
         ex : {'OPN_0010': {'width': 3000, 'height': 2145}}
         """
-        # 카메라 이름가져오기
+        # Get the name of the camera
         result = self.get_camera_names()
         split_name = result.split("_")
         seq_name = split_name[:2]
         camera_name = "_".join(seq_name)
 
-        # 카메라의 shape 노드 찾기
+        # Find the shape node on the camera
         camera_undistortion = {}
         shapes = cmds.listRelatives(result, shapes=True, type='camera')
         camera_shape = shapes[0]
 
-        # 카메라의 image plane 찾기
-        image_planes = cmds.listConnections(camera_shape, type='imagePlane')#객체속의 연결되어 있는 다른노드들을 탐색합나다.
+        # Find the image plane on the camera
+        image_planes = cmds.listConnections(camera_shape, type='imagePlane') # explore other connected nodes in an object.
         image_plane = image_planes[0]
 
-        # coverageX와 coverageY 값 가져오기
+        # Get coverageX and coverageY values
         try:
             coverage_x = cmds.getAttr(f"{image_plane}.coverageX")
             coverage_y = cmds.getAttr(f"{image_plane}.coverageY")
@@ -759,7 +748,7 @@ Lighting Team Cleanup List\n
             return camera_undistortion
 
         except Exception as e:
-            print(f"  이미지 플레인 속성 값을 가져오는 중 오류가 발생했습니다: {e}")
+            print(f"Error getting image plane property value: {e}")
 
 
 
