@@ -6,12 +6,7 @@ import subprocess
 import json
 import maya.cmds as cmds
 import maya.mel as mel
-from maya  import OpenMayaUI as omui
-sys.path.append("/home/rapa/git/pipeline/api_scripts")
-sys.path.append("/usr/local/lib/python3.6/site-packages")
-from pprint import pprint
-pprint(sys.path)
-
+from maya import OpenMayaUI as omui
 from shiboken2 import wrapInstance
 from shotgun_api3 import shotgun
 
@@ -31,18 +26,10 @@ except:
 class AssetPublish(QWidget):
     def __init__(self):
         super().__init__()
-
         self.make_ui()
         self.connect_sg()
-
-        self.get_current_file_path()
-        self.get_project()
-        self.get_user_task()
-        self.get_version()
-        self.get_asset_type()
-        self.get_asset_name()
+        self.setText_labels()
         self.classify_task()
-
         self.ui.pushButton_pub.clicked.connect(self.get_root_nodes)
 
 
@@ -73,57 +60,69 @@ class AssetPublish(QWidget):
                             SCRIPT_NAME,
                             API_KEY)
 
-# 정보가져오기
-    def get_current_file_path(self): # 현재 작업 파일의 경로 가져오기
-        self.current_file_path = cmds.file(query=True, sceneName=True)
-        # /home/rapa/wip/Moomins/asset/Prop/coffee cup/lkd/wip/scenes/v001/glass_v001_w001.mb
+# import data
+    @property
+    def file_path(self): # 현재 작업 파일의 경로 가져오기
+        _file_path = cmds.file(query=True, sceneName=True)
+        return _file_path
 
-    def get_project(self):
-        split_file_path = self.current_file_path.split("/")
-        project = split_file_path[4]
-        self.ui.label_project.setText(project)
-        return project
-    
-    def get_asset_type(self):
-        split_file_path = self.current_file_path.split("/")
-        asset_type = split_file_path[6]
-        self.ui.label_asset_type.setText(asset_type)
-        return asset_type
-    
-    def get_asset_name(self):
+    @property
+    def project(self):
+        _project = self.file_path.split("/")[4]
+        return _project
 
-        split_file_path = self.current_file_path.split("/")
-        asset_name = split_file_path[7]
-        self.ui.label_assetname.setText(asset_name)
-        return asset_name
-    
-    def get_user_task(self):
-        split_file_path = self.current_file_path.split("/")
-        user_task = split_file_path[8] # mod, lkd, rig
-        return user_task
+    @property
+    def asset_type(self):
+        _asset_type = self.file_path.split("/")[6]
+        return _asset_type
 
-    def get_version(self):
+    @property
+    def asset_name(self):
+        _asset_name = self.file_path.split("/")[7]
+        return _asset_name
 
-        split_file_path = self.current_file_path.split("/")
-        file_name = split_file_path[11]
+    @property
+    def user_task(self):
+        _user_task = self.file_path.split("/")[8]
+        return _user_task
+
+    @property
+    def file_name(self):
+        _file_name = self.file_path.split("/")[11]
+        return _file_name
+
+    @property
+    def version(self):
         p = re.compile('v\d{3}')
-        p_data = p.search(file_name) #객체화
+        p_data = p.search(self.file_name)
         version = p_data.group()
-        self.ui.label_version.setText(version)
-        # print (f'버전 : {version}')
         return version
 
+    def set_project(self):
+        self.ui.label_project.setText(self.project)
 
-# 현재 작업 task를 분리해서 각각 클린업리스트 보여주고, export할 때 다른 함수 실행
+    def set_asset_type(self):
+        self.ui.label_asset_type.setText(self.asset_type)
+
+    def set_asset_name(self):
+        self.ui.label_assetname.setText(self.asset_name)
+
+    def set_version(self):
+        self.ui.label_version.setText(self.version)
+    def setText_labels(self):
+        self.set_project()
+        self.set_asset_name()
+        self.set_asset_type()
+        self.set_version()
+
     def classify_task(self):
-        user_task = self.get_user_task()
-        print(f"현재 작업 Task는 {user_task}입니다.")
+        print(f"Current Task is {self.user_task}.")
         # Modeling : mb                           export + sg status update + mb pub directory update
         # Lookdev  : mb, abc, shader.ma, json, texture export + sg status update + mb pub directory update
         # Rigging  : mb                           export + sg status update + mb pub directory update
 
         # """ """안의 내용은 주석이 아니라 변수로 받기 위한 내용입니다
-        if user_task == "mod": # mb export
+        if self.user_task == "mod": # mb export
             mod_clean_up_list = """
 Modeling팀 클린업리스트\n
 - 불필요한 폴리곤 제거 및 N-gons/트라이앵글 정리
@@ -138,7 +137,7 @@ Modeling팀 클린업리스트\n
             self.ui.textEdit_comment.setText(mod_clean_up_list)
             self.ui.pushButton_pub.clicked.connect(self.mod_event)
 
-        elif user_task == "lkd": # mb, scenes/shader/shader.ma, sourceimages/texture, json export
+        elif self.user_task == "lkd": # mb, scenes/shader/shader.ma, sourceimages/texture, json export
             lkd_clean_up_list = """
 LookDev팀 클린업리스트\n
 - 텍스처 해상도 표준화 및 파일 포맷 최적화
@@ -153,7 +152,7 @@ LookDev팀 클린업리스트\n
             self.ui.textEdit_comment.setText(lkd_clean_up_list)
             self.ui.pushButton_pub.clicked.connect(self.lkd_event)
 
-        elif user_task == "rig": # mb export
+        elif self.user_task == "rig": # mb export
             rig_clean_up_list = """
 Rigging팀 클린업리스트\n
 - 조인트 계층 구조 확인 및 컨트롤러 최적화
@@ -214,11 +213,11 @@ Rigging팀 클린업리스트\n
         created_folders = []
 
         for folder in folder_list:
-            folder_path = os.path.join(self.open_pub_path, folder) 
+            folder_path = os.path.join(self.open_pub_path, folder)
             version_path = os.path.join(folder_path, version)
-            
+
             if not os.path.exists(version_path):
-                try:           
+                try:
                     os.makedirs(version_path, exist_ok=True) # 폴더 생성
                     print (f"경로 '{version_path}가 성공적으로 생성되었습니다.")
                     created_folders.append(version_path)
@@ -229,17 +228,17 @@ Rigging팀 클린업리스트\n
                     success_msg_box.setStandardButtons(QMessageBox.Ok)
                     success_msg_box.exec()
 
-                except OSError as e: 
+                except OSError as e:
                     print (f"경로 '{version_path}'생성 중 오류 발생 : {str(e)}")
                     error_msg_box = QMessageBox()
                     error_msg_box.setIcon(QMessageBox.Critical)
                     error_msg_box.setText(f"경로 '{version_path}'생성 중 오류 발생 : {str(e)}")
                     error_msg_box.setWindowTitle("경로 생성 실패")
                     error_msg_box.setStandardButtons(QMessageBox.Ok)
-                    error_msg_box.exec()     
-       
+                    error_msg_box.exec()
+
         return self.open_pub_path
-    
+
     def make_publish_lkd_path(self): # lkd에서만 scenes 안에 shader 폴더 생성
         if not self.current_file_path: # 현재 작업 파일 경로가 없을 경우
             print("파일이 저장되지 않았거나 열리지 않았습니다.")
@@ -252,11 +251,11 @@ Rigging팀 클린업리스트\n
         version = self.get_version() # v001
 
         lkd_pub_path = f"/home/rapa/pub/{project}/asset/{asset_type}/{asset_name}/{task}/pub/scenes/{version}/shader/"
-        
+
         if not os.path.exists(lkd_pub_path):
             os.makedirs(lkd_pub_path, exist_ok=True) # 폴더 생성
             print (f"경로 '{lkd_pub_path}가 성공적으로 생성되었습니다.")
-            try:           
+            try:
                 os.makedirs(lkd_pub_path, exist_ok=True) # 폴더 생성
                 print (f"경로 '{lkd_pub_path}가 성공적으로 생성되었습니다.")
                 success_msg_box = QMessageBox()
@@ -266,19 +265,19 @@ Rigging팀 클린업리스트\n
                 success_msg_box.setStandardButtons(QMessageBox.Ok)
                 success_msg_box.exec()
 
-            except OSError as e: 
+            except OSError as e:
                 print (f"경로 '{lkd_pub_path}'생성 중 오류 발생 : {str(e)}")
                 error_msg_box = QMessageBox()
                 error_msg_box.setIcon(QMessageBox.Critical)
                 error_msg_box.setText(f"경로 '{lkd_pub_path}'생성 중 오류 발생 : {str(e)}")
                 error_msg_box.setWindowTitle("경로 생성 실패")
                 error_msg_box.setStandardButtons(QMessageBox.Ok)
-                error_msg_box.exec()     
-    
+                error_msg_box.exec()
+
         return lkd_pub_path
 
 # 생성된 폴더 오픈
-    def open_folder(self): 
+    def open_folder(self):
         subprocess.call(["xdg-open", self.open_pub_path])
 
 
@@ -300,10 +299,10 @@ Rigging팀 클린업리스트\n
     def get_shader_nodes(self):
     # 모든 쉐이더 노드를 가져옵니다.
         all_shaders = cmds.ls(materials=True)
-    
+
     # 제외할 기본 쉐이더 이름 리스트
         base_shaders = ["lambert1", "standardSurface1", "particleCloud1"]
-        
+
         # 기본 쉐이더를 제외한 나머지 쉐이더만 필터링
         custom_shaders = []
 
@@ -320,7 +319,7 @@ Rigging팀 클린업리스트\n
         shader_dictionary = {}
         shading_groups = cmds.ls(type="shadingEngine")
         for shading_group in shading_groups:
-            shader = cmds.ls(cmds.listConnections(shading_group + ".surfaceShader"), materials=True)    
+            shader = cmds.ls(cmds.listConnections(shading_group + ".surfaceShader"), materials=True)
             if not shader:
                 continue
             objects = cmds.sets(shading_group, q=True)
@@ -329,7 +328,7 @@ Rigging팀 클린업리스트\n
                 if shader_name not in shader_dictionary:
                     shader_dictionary[shader_name] = []
                 shader_dictionary[shader_name].extend(objects)
-        return shader_dictionary   
+        return shader_dictionary
 
 
 # Export
@@ -376,7 +375,7 @@ Rigging팀 클린업리스트\n
         if not self.current_file_path:
             print ("파일이 저장되지 않았거나 열리지 않았습니다.")
             return
-        
+
         # 경로 분석
         self.make_publish_path() #폴더 생성
         project = self.get_project() # Moomins
@@ -384,13 +383,13 @@ Rigging팀 클린업리스트\n
         asset_name = self.get_asset_name() # coffee cup
         task = self.get_user_task() # lkd
         version = self.get_version() # v001
-        
+
         # PUB 경로
         self.open_pub_path=f"/home/rapa/pub/{project}/asset/{asset_type}/{asset_name}/{task}/pub/"
         abc_file_path = os.path.join(self.open_pub_path,'cache', version, f'{asset_name}_{task}_{version}.abc')
         folder_path = os.path.dirname(abc_file_path)
         print(f'ABC 파일 경로 : {folder_path}')
-                
+
         # 파일 존재 여부 확인
         if os.path.exists(abc_file_path):
             print (f'Alembic파일 {abc_file_path}가 이미 존재합니다. 내보내기를 취소합니다.')
@@ -453,7 +452,7 @@ Rigging팀 클린업리스트\n
 
                 if node_type == 'file':
                     #fileTextureName : tiff파일이나 다른 파일의 확장자까지 받음
-                    current_path = cmds.getAttr(f"{connected_node}.fileTextureName") 
+                    current_path = cmds.getAttr(f"{connected_node}.fileTextureName")
 
                     if not current_path or not os.path.exists(current_path):
                         print(f"'{connected_node}'에 연결된 유효한 파일이 없습니다.")
@@ -526,14 +525,14 @@ Rigging팀 클린업리스트\n
         try:
             # 쉐이더와 관련된 노드만 선택합니다.
             cmds.select(shaders, noExpand=True)
-            
+
             # 쉐이더 네트워크를 포함한 파일 내보내기
-            cmds.file(file_path_export, 
-                    force=True, 
-                    options="v=0;", 
-                    type="mayaAscii", 
+            cmds.file(file_path_export,
+                    force=True,
+                    options="v=0;",
+                    type="mayaAscii",
                     exportSelected=True)
-            
+
         except Exception as e:
             cmds.warning(f"쉐이더 내보내기 중 오류 발생: {str(e)}")
             return False
