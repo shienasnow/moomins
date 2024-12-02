@@ -85,7 +85,7 @@ class AssetLoader(QWidget):
         self.ui.label_sqnum.setText(self.seq_num)
         self.ui.label_task.setText(self.task)
 
-        self.shot_id = self.sg_api.get_shot_id(self.seq_num)
+        self.shot_id = self.sg_api.get_shot_id_by_seq_num(self.seq_num)
         print(f"Current Task Shot Number : {self.seq_num} (id : {self.shot_id})")
 
 
@@ -117,7 +117,7 @@ class AssetLoader(QWidget):
 
 # Layout : Find information about assets tagged in shot number (mod.mb or rig.mb)
     def get_ly_assigned_assets(self): # Get the asset ids tagged in shot, make them a list, and hand them over to the next function.
-        assets_of_seq = self.sg_api.get_assets_of_seq(self.seq_num)
+        assets_of_seq = self.sg_api.get_assets_by_seq_num(self.seq_num)
         asset_list = assets_of_seq["assets"]
         # print(asset_list)
         # [{'id': 1546, 'name': 'bat', 'type': 'Asset'},

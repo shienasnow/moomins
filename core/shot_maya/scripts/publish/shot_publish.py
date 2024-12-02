@@ -99,7 +99,7 @@ class ShotPublish(QWidget):
 
     def get_shot_id(self):
         seq_num = self.get_seq_number()
-        shot_id = self.sg_api.get_shot_id(seq_num)
+        shot_id = self.sg_api.get_shot_id_by_seq_num(seq_num)
         return shot_id
 
     def get_shot_version(self):
@@ -564,7 +564,7 @@ Lighting Team Cleanup List\n
         undistortion_width = str(undistortion_dict[camera_names]["width"]) # 2040 (str)
         undistortion_height = str(undistortion_dict[camera_names]["height"]) # 1220 (str)
 
-        shot_id = self.get_shot_id() # 1353
+        shot_id = self.get_shot_id_by_seq_num() # 1353
 
         # Upload each to the undistortion size field of the SG Shot entity.
         self.sg_api.update_undistortion_size(shot_id, undistortion_width, undistortion_height)
