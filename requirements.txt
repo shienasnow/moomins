@@ -1,0 +1,6 @@
+PySide6==6.5.2        # Latest PySide6
+PySide2               # Use PySide2 in Maya 2022
+shiboken6             # Shiboken fir PySide6
+shiboken2             # Shiboken for PySide2용
+shotgun_api3          # Shotgun API
+python-dotenv==1.0.1  # Loading Environment Variables

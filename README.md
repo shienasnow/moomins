@@ -74,3 +74,10 @@ Moomins-API/
 │   └── nuke/                   # Nuke pipeline for shot work
 ├── sourceimages                # Collection of source images (PNG)
 └── create_desktop_file.py      # Execution file
+
+
+## Required Packages
+The list of external packages required to run this API is described in requirements.txt.
+
+"pip install -r requirements.txt"
+You can install the required libraries with the above commands.
