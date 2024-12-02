@@ -10,7 +10,7 @@ class ShotgunApi:
         self.connect_sg()
 
     def connect_sg(self):
-        
+
         URL = "https://4thacademy.shotgrid.autodesk.com"
         SCRIPT_NAME = "moomins_key"
         API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
@@ -18,39 +18,37 @@ class ShotgunApi:
         self.sg = shotgun.Shotgun(URL,
                                 SCRIPT_NAME,
                                 API_KEY)
-        
         return URL
 
-    def get_project_by_id(self, user_id): # 로그인된 유저의 데이터를 가져오는 함수
 
 
+    def get_project_by_id(self, user_id):
+        """
+        Function to import data from logged-in users
+        """
         filters = [["id", "is", user_id]]
-        fields = ["projects"]
-        # entity # 조건에맞는 사람의 # 이 필드들을 가져와라.    
+        fields = ["projects"] 
         project = self.sg.find_one("HumanUser", filters=filters, fields=fields)
+        #[{'id': 188, 'name': 'Moomins', 'type': 'Project'}]
 
         return project["projects"]
-        #[{'id': 188, 'name': 'Moomins', 'type': 'Project'}]
 
     def get_name_by_id(self,user_id):
         filters = [["id", "is", user_id]]
         fields = ["name"]
         name = self.sg.find_one("HumanUser", filters=filters, fields=fields)
+
         return name["name"]
 
-    def get_task_data(self, user_id): # Shot 작업자에게 할당된 데이터 정보 가져오기 
+    def get_task_data(self, user_id):
         """
-        shot 작업자의 user data 가져오기
+        Get tasks assigned to artists with user_id.
         """
-        # user_id = 121
         user_name = self.get_name_by_id(user_id)
 
         filters = [["task_assignees", "is", {'id': user_id, 'name': user_name, 'type': 'HumanUser'}]]
         fields = ["projects", "entity", "task_assignees", "step", "sg_status_list", "start_date", "due_date", "project"]
-        datas_list = self.sg.find("Task", filters=filters, fields=fields) # 리스트에 싸여진 딕셔너리들 데이터
-        
-        # print (datas_list)
-        return datas_list
+        datas_list = self.sg.find("Task", filters=filters, fields=fields)
 
         # {'due_date': '2024-09-29',
         # 'entity': {'id': 1349, 'name': 'TRS_0010', 'type': 'Shot'},
@@ -71,19 +69,26 @@ class ShotgunApi:
         # 'step': {'id': 8, 'name': 'cmp', 'type': 'Step'},
         # 'task_assignees': [{'id': 94, 'name': '주석 박', 'type': 'HumanUser'}],
         # 'type': 'Task'}
-        
-    def get_assets_data(self,asset_id): # 할당된 데이터중 asset_id를 받아 assets의 데이터를 찾는 함수
+
+        return datas_list
+
+    def get_assets_data(self, asset_id):
+        """
+        Function to find assets data with asset_id
+        """
         filters = [["id", "is", asset_id]]
         fields = ["code","sg_asset_type"] 
         if asset_id:
             assets_datas = self.sg.find_one("Asset",filters=filters,fields=fields)
         return assets_datas
-        
-    def get_assigned_Shot_num_lgt_task(self,seq_num): # comp팀의 작업을 위해 lgt팀의 할당된 작업들을 구하는 함수
 
-        filter = [["code","is",seq_num]]
+    def get_assigned_Shot_num_lgt_task(self, seq_num):
+        """
+        A function that finds the assigned tasks of the lgt step for the task of the comp step
+        """
+        filter = [["code", "is", seq_num]]
         content_field = ["content"]
-        frame_field = ["sg_cut_in","sg_cut_out"]
+        frame_field = ["sg_cut_in", "sg_cut_out"]
         lgt_content = self.sg.find("Shot", filters=filter, fields=content_field)
         seq_frame_list = self.sg.find("Shot", filters=filter, fields=frame_field)
 
@@ -93,46 +98,48 @@ class ShotgunApi:
         datas_list = self.sg.find("Task", filters=filter, fields=field)
 
         return seq_frame_list,datas_list
-        
-    def sg_status_update(self,asset_name,task):  ################# status update
-        # project id 구하기
-        project_name = "Moomins"
-        # project name을 받든 project id로 가져와서 project 이름을 구하는 함수를 짜서 거기서 이름을 가져오던 해야할것같습니다.
 
-        project = self.sg.find_one("Project", [["name", "is", project_name]], ["id", "name"])
+    def get_project_id_by_name(self, project_name):
+        project = self.sg.find_one("Project", [["name", "is", project_name]], ["id"])
+        project_id = project[id]
+        return project_id
 
-        # asset id 구하기
-        asset_filter = [["code", "is", asset_name], ["project", "is", project]]
+    def sg_status_update(self, asset_name, task):
+        # Get project id
+        project_id = self.get_project_id_by_name()
+
+        # Get asset id
+        asset_filter = [["code", "is", asset_name], ["project", "is", project_id]]
         asset_field = ["id"]
         asset_info = self.sg.find_one("Asset", filters=asset_filter, fields=asset_field) # {'type': 'Asset', 'id': 1789}
         asset_id = asset_info["id"]
 
-        # task id 구하기 (mod, lkd, rig)
-        step = self.sg.find_one("Step",[["code", "is", task]], ["id"])              ####### 이것두 가져와야댐
+        # Get task id
+        step = self.sg.find_one("Step",[["code", "is", task]], ["id"])
         step_id = step["id"]
 
-        # asset_info # {'type': 'Asset', 'id': 2008}
-        # asset_name # mat
-        # asset_id # 2008
-        # step_id # 16
-
+        # find status filed that meets task, asset id condition.
         filter =[
             ["entity", "is", {"type": "Asset", "id": asset_id}],
             ["step", "is", {"type": "Step", "id": step_id}]
                     ]
         field = ["id"]
-        task_ids = self.sg.find("Task", filters=filter, fields=field)                   # task, asset id 조건에 맞는 status 필드 찾기
+        task_ids = self.sg.find("Task", filters=filter, fields=field)
 
         for task in task_ids:
             task_id = task["id"]
             self.sg.update("Task", task_id, {"sg_status_list": "wip"})
-            print(f"Task ID {task_id}의 status를 wip으로 바꿉니다")                      # Task ID 7033의 status를 wip으로 바꿉니다
+            print(f"Change status of task id '{task_id}' to 'wip'")
+
 
 # login
-    def get_dept_by_id(self, user_id): # 사용자 이름, Department 정보 가져오기
+    def get_dept_by_id(self, user_id):
+        """
+        Get user name, Department information with user_id.
+        """
         filter_dept = [["id", "is", user_id]]
         field_dept = ["name", "department"]
-        datas = self.sg.find_one("HumanUser", filters=filter_dept, fields=field_dept) # "~"에서 filters 조건에 맞는 fields를 찾는다
+        datas = self.sg.find_one("HumanUser", filters=filter_dept, fields=field_dept)
         # {'type': 'HumanUser', 'id': 121, 'name': 'hyoeun seol', 'department': {'id': 41, 'name': 'Shot', 'type': 'Department'}}
 
         return datas["department"]
@@ -206,46 +213,55 @@ class ShotgunApi:
         # {'due_date': '2024-09-31',
         # 'entity': {'id': 1349, 'name': 'AFT_0010', 'type': 'Shot'}}]
 
-    def get_shot_id(self, seq_num):
+    def get_shot_id_by_seq_num(self, seq_num):
         shot_filter = [["code", "is", seq_num]]
         shot_fields = ["id"]
         shot_entity = self.sg.find_one("Shot", filters=shot_filter, fields=shot_fields)
         shot_id = shot_entity['id']
-        
+
         return shot_id
 
     def get_assets_by_seq_num(self, seq_num):
-        
         filter = [["code", "is", seq_num]]
         field = ["assets"]
         assets_by_seq = self.sg.find_one("Shot", filters=filter, fields=field)
-        
+
         return assets_by_seq
-    
 
-    def get_assets_of_seq(self, seq_num): # 시퀀스에 해당되는 에셋들을 구합니다.
-        filter = [["code", "is", seq_num]]
-        field = ["assets"]
-        assets_of_seq = self.sg.find_one("Shot", filters=filter, fields=field)
-
-        return assets_of_seq
-
-    def get_asset_info_by_asset_id(self, asset_id): # asset id로 에셋 정보를 구합니다.
+    def get_asset_info_by_asset_id(self, asset_id): ##### 비슷한 함수
+        """
+        Find asset information with asset id.
+        """
         filter = [["id", "is", asset_id]] # [1546, 1479, 1547]
         field = ["code", "sg_status_list", "tasks"]
         asset_info = self.sg.find("Asset", filters=filter, fields=field)
 
         return asset_info
 
-    def get_link_camera_directory(self, shot_id): # shot id 기준으로 rendercam 경로 리턴
+    def get_asset_datas_by_asset_id(self, asset_id): ##### 비슷한 함수
+        """
+        Find artist, status, pub date, asset name, step with asset id.
+        """
+        filter = [["id", "is", asset_id]]
+        field = ["task_assignees", "sg_status_list", "updated_at", "content", "step"]
+        asset_datas = self.sg.find("Task", filters=filter, fields=field)
+        return asset_datas
+
+
+    def get_link_camera_directory(self, shot_id):
+        """
+        Return rendercam path based on shot id.
+        """
         filter = [["id", "is", shot_id]]
         field = ["description"]
         camera_info = self.sg.find_one("Shot", filters=filter, fields=field)
 
         return camera_info["description"]
 
-    def get_undistortion_size(self, shot_id): # 매치무브 팀에서 샷그리드에 pub한 undistortion size를 받아와서 리턴
-        # shot_id를 기준으로 undistortion size를 가져온다.
+    def get_undistortion_size(self, shot_id):
+        """
+        Find the undistortion size relative to the shot id, published in the shot grid in mm step.
+        """
         filter = [["id", "is", shot_id]]
         field =["sg_undistortion_height", "sg_undistortion_width"]
         undistortion_info = self.sg.find_one("Shot", filters=filter, fields=field)
@@ -254,8 +270,10 @@ class ShotgunApi:
 
         return undistortion_height, undistortion_width
 
-    def get_frame_range_by_shot_id(self, shot_id): # 샷그리드에서 Frame Range를 받아와서 리턴
-        # shot_id를 기준으로 frame range를 받아온다.
+    def get_frame_range_by_shot_id(self, shot_id):
+        """
+        Get the frame range in the shot grid based on shot_id.
+        """
         filter = [["id", "is", shot_id]]
         field = ["sg_cut_in", "sg_cut_out"]
         frame_info = self.sg.find_one("Shot", filters=filter, fields=field)
@@ -269,7 +287,9 @@ class ShotgunApi:
         return tasks_info
 
     def get_path_info_by_task_id(self, task_id):
-        # task entity에서 sg_description으로 에셋이 publish된 경로와 pub 날짜 가져오기
+        """
+        Get the path and pub date that the asset is published in task entity.
+        """
         filter = [["id", "is", task_id]]
         field = ["sg_description"]
         path_info = self.sg.find_one("Task", filters=filter, fields=field)
@@ -281,10 +301,10 @@ class ShotgunApi:
     
     def get_lgt_assgined_assets_by_shot_id(self, shot_id):
          
-        filter_ly = [["entity", "is", {"type" : "Shot", "id" : shot_id}], ["step", "is", {"type": "Step", "id": 277}]] # shot_id + ly의 step id
-        filter_ani = [["entity", "is", {"type" : "Shot", "id" : shot_id}], ["step", "is", {"type": "Step", "id": 106}]] # shot_id + ani의 step id
-        filter_fx = [["entity", "is", {"type" : "Shot", "id" : shot_id}], ["step", "is", {"type": "Step", "id": 276}]] # shot_id + fx의 step id
-        field = ["id", "sg_description"] # pub abc 파일 경로, task id
+        filter_ly = [["entity", "is", {"type" : "Shot", "id" : shot_id}], ["step", "is", {"type": "Step", "id": 277}]] # shot_id + ly's step id
+        filter_ani = [["entity", "is", {"type" : "Shot", "id" : shot_id}], ["step", "is", {"type": "Step", "id": 106}]] # shot_id + ani's step id
+        filter_fx = [["entity", "is", {"type" : "Shot", "id" : shot_id}], ["step", "is", {"type": "Step", "id": 276}]] # shot_id + fx's step id
+        field = ["id", "sg_description"] # publised abc file directory, task id
 
         ly_asset_info = self.sg.find("Task", filters=filter_ly, fields=field)
         ani_asset_info = self.sg.find("Task", filters=filter_ani, fields=field)
@@ -296,30 +316,23 @@ class ShotgunApi:
 
         return ly_asset_info, ani_asset_info, fx_asset_info
 
-    def get_asset_datas_by_asset_id(self, asset_id):
-        # 어셋 id로 작업자, status, pub날짜, 에셋 이름, step 찾기
-        filter = [["id", "is", asset_id]]
-        field = ["task_assignees", "sg_status_list", "updated_at", "content", "step"]
-        asset_datas = self.sg.find("Task", filters=filter, fields=field)
-        return asset_datas
 
 
-# Backend
-    # Asset Loader - re, wtg에서 new scene하면 status wip으로 변경
+    # Backend
     def sg_asset_task_status_update(self,asset_name,task):
-        print("wtg, re 상태에서 new scene을 했을 때, status를 wip으로 업데이트합니다.")
-
-        # asset id 구하기
-        asset_filter = [["code", "is", asset_name]] # 현재 작업 중인 asset name ex.jane
+        """
+        Update status to 'wip' when new scene is made in 'wtg', 're' state.
+        """
+        # Get asset id
+        asset_filter = [["code", "is", asset_name]]
         asset_field = ["id"]
         asset_info = self.sg.find_one("Asset", filters=asset_filter, fields=asset_field) # {'type': 'Asset', 'id': 1789}
         asset_id = asset_info["id"]
         print(f"asset_id : {asset_id}")
 
-        # task id 구하기 (mod, lkd, rig)
+        # Get task id (mod, lkd, rig)
         step = self.sg.find_one("Step",[["code", "is", task]], ["id"])
         step_id = step["id"]
-        print(f"step_id : {step_id}")
 
         filter =[
             ["entity", "is", {"type": "Asset", "id": asset_id}],
@@ -332,22 +345,19 @@ class ShotgunApi:
         for task in task_ids:
             task_id = task["id"]
             self.sg.update("Task", task_id, {"sg_status_list": "wip"})
-            print(f"Task ID {task_id}의 status를 wip으로 바꿉니다")
+            print(f"Change status of task id '{task_id}' to 'wip'")
 
-
-    # Shot Loader - re, wtg에서 new scene하면 status wip으로 변경
-    def sg_shot_task_status_update(self, seq_num, task): # 완료
-        print("wtg, re 상태에서 new scene을 했을 때, status를 wip으로 업데이트합니다.")
-        print("***************************** shot wip status update")
-
-        # shot id 구하기
-        seq_filter = [["code", "is", seq_num]] # 현재 작업 중인 시퀀스 넘버 ex.OPN_0010
+    def sg_shot_task_status_update(self, seq_num, task):
+        """
+        Update status to 'wip' when new scene is made in 'wtg', 're' state.
+        """
+        # Get shot id
+        seq_filter = [["code", "is", seq_num]]
         seq_field = ["id"]
         seq_info = self.sg.find_one("Shot", filters=seq_filter, fields=seq_field) # {'type': 'Asset', 'id': 1789}
         shot_id = seq_info["id"]
-        print(f"shot_id 찾기 : {shot_id}")
 
-        # task id 구하기 (mm, ly, ani, fx, lgt, prc, cmp)
+        # Get task id (mm, ly, ani, fx, lgt, prc, cmp)
         step = self.sg.find_one("Step",[["code", "is", task]], ["id"])
         step_id = step["id"]
         print(f"step_id 찾기 : {step_id}")
@@ -363,21 +373,17 @@ class ShotgunApi:
         for task in task_ids:
             task_id = task["id"]
             self.sg.update("Task", task_id, {"sg_status_list": "wip"})
-            print(f"Task ID {task_id}의 status를 wip으로 바꿉니다")
+            print(f"Change status of task id '{task_id}' to 'wip'")
 
 
-
-    # Asset, Shot Status 자동화 메서드
-    # maya와 nuke의 모든 코드에서 실행
+    # Status Automation Method (Run on all code in maya and nuke)
     def sg_asset_status_update_automation1(self, asset_name):
-        print("********** Asset Status 자동화 백엔드")
-
         """
-        asset_id에 해당하는 mod, lkd, rig task의 status를 조회
-        모두 fin일 때 Asset Status가 fin이 되게
+        Check the status of mod, lkd, rig task corresponding to asset_id
+        When all of them are 'fin', the asset status is 'fin'
         """
-        # asset id 구하기
-        asset_filter = [["code", "is", asset_name]] # 현재 작업 중인 asset name
+        # Get asset id
+        asset_filter = [["code", "is", asset_name]]
         asset_field = ["id"]
         asset_info = self.sg.find_one("Asset", filters=asset_filter, fields=asset_field)
         asset_id = asset_info["id"]
@@ -397,17 +403,18 @@ class ShotgunApi:
         
         all_fin = True
         for status in status_list:
-            if not status == "fin": # 하나라도 fin인 상태가 아니면 False
+            if not status == "fin": # False if even one of the statuses is not 'fin'
                 all_fin = False
                 break
 
+        # Change the asset status to fin only if it is all 'fin'.
         if all_fin == True:
-            self.sg.update("Asset", asset_id, {"sg_status_list": "wip"}) # 모두 fin인 경우 Asset Status를 fin으로 바꾼다.
+            self.sg.update("Asset", asset_id, {"sg_status_list": "wip"})
 
 
         """
-        asset_id에 해당하는 task 중 하나라도 re이면
-        Asset Status가 re이 되게
+        If any of the tasks corresponding to asset_id is 're'
+        Asset Status is 're'.
         """
         all_re = False
         for status in status_list:
@@ -419,23 +426,20 @@ class ShotgunApi:
 
     def sg_shot_status_update_automation(self, seq_num):
         """
-        shot_id에 해당하는 mm, ly, ani, fx, lgt, cmp의 task의 status를 조회
-        모두 fin일 때 shot status가 fin이 되게
+        Check the status of tasks in mm, ly, ani, fx, lgt, cmp step corresponding to shot_id
+        When it's all fin, the shot status is fin
         """
-        print("********** Shot Status 자동화 백엔드")
-
-
-        # shot id 구하기
-        seq_filter = [["code", "is", seq_num]] # 현재 작업 중인 시퀀스 넘버 ex.OPN_0010
+        # Get shot id
+        seq_filter = [["code", "is", seq_num]]
         seq_field = ["id"]
         seq_info = self.sg.find_one("Shot", filters=seq_filter, fields=seq_field) # {'type': 'Asset', 'id': 1789}
         shot_id = seq_info["id"]
         print(f"shot_id 찾기 : {shot_id}")
 
 
-        # shot id에 해당하는 task들의 status 다 구하기
+        # Get all the status of tasks corresponding to shot id.
         filters = [["entity", "is", {"type": "Shot", "id": shot_id}]]
-        fields = ["sg_status_list", "content"]  # content는 Task의 이름입니다.
+        fields = ["sg_status_list", "content"]
         tasks = self.sg.find("Task", filters=filters, fields=fields)
 
         for task in tasks:
@@ -454,16 +458,17 @@ class ShotgunApi:
         
         all_fin = True
         for status in status_list:
-            if not status == "fin": # 하나라도 fin인 상태가 아니면 False
+            if not status == "fin": # False if even one of the statuses is not 'fin'
                 all_fin = False
                 break
 
+        # Change the asset status to fin only if it is all 'fin'.
         if all_fin == True:
-            self.sg.update("Asset", shot_id, {"sg_status_list": "wip"}) # 모두 fin인 경우 Asset Status를 fin으로 바꾼다.
+            self.sg.update("Asset", shot_id, {"sg_status_list": "wip"}) 
 
         """
-        shot_id에 해당하는 task 중 하나라도 re이면
-        Shot Status가 wip이 되게
+        If any of the tasks corresponding to shot_id is 're'
+        Shot Status is 're'.
         """
         all_re = False
         for status in status_list:
@@ -474,13 +479,6 @@ class ShotgunApi:
             self.sg.update("Asset", shot_id, {"sg_status_list": "re"})
 
 
-    def get_shot_id(self, seq_num):
-        shot_filter = [["code", "is", seq_num]] # AFT_0010
-        shot_field = ["id"]
-        shot_entity = self.sg.find_one("Shot", filters=shot_filter, fields=shot_field)
-        shot_id = shot_entity['id']
-        return shot_id
-
 
 
 
@@ -488,7 +486,7 @@ class ShotgunApi:
 
 # Shot Publish
     def get_task_id(self, seq_num):
-        seq_filter = [["code", "is", seq_num]] # Sequence number currently being worked on. ex.OPN_0010
+        seq_filter = [["code", "is", seq_num]]
         seq_field = ["id"]
         seq_info = self.sg.find_one("Shot", filters=seq_filter, fields=seq_field) # {'type': 'Asset', 'id': 1789}
         seq_num_id = seq_info["id"]
@@ -524,3 +522,112 @@ class ShotgunApi:
     def update_undistortion_size(self, shot_id, undistortion_width, undistortion_height):
         self.sg.update("Shot", shot_id, {"sg_undistortion_width" : undistortion_width,
                                          "sg_undistortion_height" : undistortion_height})
+
+
+# Asset & Shot Upload
+    def get_artist_name(self, user_id):
+
+        filter = [["id", "is", user_id]]
+        field = ["name"]
+        artist_info = self.sg.find_one("HumanUser", filters=filter, fields=field)
+        artist_name = artist_info["id"]
+        print(artist_name)
+
+        return artist_name
+
+    def get_project_id_by_name(self, project):
+        # Get project id by project name
+        filter = [["name", "is", project]]
+        field = ["id"]
+        project_info = self.sg.find_one("Project", filters=filter, fields=field)
+        project_id = project_info["id"]
+
+        return project_id
+
+
+    def sg_upload_image(self, png_path):
+        self.sg.upload("Task", self.task_id, png_path, "image")
+
+
+    def sg_asset_upload_mov(self, project_id, version, comment, selected_asset_id, user_id, mov_path):
+
+        # Version Entity
+        version_data = {
+            "project":{"type" : "Project", "id" : project_id},
+            "code" : version,
+            "description" : comment,
+            "entity" : {"type": "Asset", "id": selected_asset_id}, # Connects to Asset Entity.
+            "sg_task" : {"type": "Task", "id": self.task_id}, # Connects to Task Entity.
+            "sg_status_list" : "pub"
+        }
+
+        new_version = self.sg.create("Version", version_data) # Create Add Version
+        version_id = new_version["id"]
+
+        self.sg.update("Version", version_id, {"user" : {"type" : "HumanUser", "id" : user_id}}) # Upload Artist field
+        self.sg.upload("Version", version_id, mov_path, "sg_uploaded_movie") # Upload mov file
+
+    def sg_shot_upload_mov(self, project_id, version, comment, selected_seq_id, user_id, mov_path):
+
+        # Version Entity
+        version_data = {
+            "project":{"type" : "Project", "id" : project_id},
+            "code" : version,
+            "description" : comment,
+            "entity" : {"type": "Shot", "id": selected_seq_id}, # Connects to Shot Entity.
+            "sg_task" : {"type": "Task", "id": self.task_id}, # Connects to Task Entity.
+            "sg_status_list" : "pub"
+        }
+
+        new_version = self.sg.create("Version", version_data) # Create Add Version
+        version_id = new_version["id"]
+
+        self.sg.update("Version", version_id, {"user" : {"type" : "HumanUser", "id" : user_id}}) # Upload Artist field
+        self.sg.upload("Version", version_id, mov_path, "sg_uploaded_movie") # Upload mov file
+
+
+    def sg_asset_status_update_pub(self, selected_asset_name, task):
+        # Get asset id
+        asset_filter = [["code", "is", selected_asset_name]]
+        asset_field = ["id"]
+        asset_info = self.sg.find_one("Asset", filters=asset_filter, fields=asset_field) # {'type': 'Asset', 'id': 1789}
+
+        self.selected_asset_id = asset_info["id"]
+
+        # Get task id (mod, lkd, rig)
+        step = self.sg.find_one("Step",[["code", "is", task]], ["id"])
+        step_id = step["id"] # 14 (mod step id)
+        filter =[
+            ["entity", "is", {"type": "Asset", "id": self.selected_asset_id}],
+            ["step", "is", {"type": "Step", "id": step_id}]
+                 ] 
+        field = ["id"]
+        task_info = self.sg.find_one("Task", filters=filter, fields=field) # find status fields that meet asset id, task id conditions
+        self.task_id = task_info["id"]
+
+        self.sg.update("Task", self.task_id, {"sg_status_list" : "pub"})
+        print(f"Update the status of {self.task_id} to 'pub' on the asset entity.")
+
+    def sg_shot_status_update_pub(self, selected_seq_num, task):
+        # Get seq id
+        seq_filter = [["code", "is", selected_seq_num]] # OPN_0010
+        seq_field = ["id"]
+        seq_info = self.sg.find_one("Shot", filters=seq_filter, fields=seq_field) # {'type': 'Asset', 'id': 1789}
+        selected_seq_num_id = seq_info["id"]
+
+        # Get task id (ly, ani, lgt)
+        step = self.sg.find_one("Step",[["code", "is", task]], ["id"])
+        step_id = step["id"] # 277 (ly step id)
+
+        # # find status fields that meet seq id, task id conditions
+        filter =[
+            ["entity", "is", {"type": "Shot", "id": selected_seq_num_id}],
+            ["step", "is", {"type": "Step", "id": step_id}]
+                 ] 
+        field = ["id"]
+        task_info = self.sg.find_one("Task", filters=filter, fields=field)
+        print(task_info)
+        task_id = task_info["id"]
+
+        self.sg.update("Task", task_id, {"sg_status_list": "pub"})
+        print(f"Update the status of {task_id} to 'pub' on the Sequence entity.")

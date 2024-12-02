@@ -2,12 +2,10 @@
 import sys
 import os
 import subprocess
-import json
 from datetime import datetime
 from glob import glob
 from configparser import ConfigParser
 from pprint import pprint
-from functools import partial
 
 try:
     from PySide6.QtWidgets import QApplication, QWidget, QGridLayout
@@ -34,9 +32,12 @@ class AssetLoader(QWidget):
     def __init__(self, user_id):
         super().__init__()
 
-        self.get_env_info()
+        self.user_id = user_id
+
         self.sg_api = ShotgunApi
         self.maya_api = MayaApi
+        self.sg_api.get_datas_by_user_id(self.user_id)
+        self.get_user_id() # When you run Maya through Loader, you get the user_id in the terminal and find the user_name.
 
         self.make_ui()
         self.event_func() # Event Function Collection
@@ -57,21 +58,19 @@ class AssetLoader(QWidget):
         self.ui.pushButton_import.clicked.connect(self.get_checked_row) # If you click the Import button, import the asset of the selected list.
         self.ui.pushButton_refresh.clicked.connect(self.refresh_sg) # Refresh shot grid interworking by pressing the Refresh button.
 
-    def get_env_info(self):
-        from dotenv import load_dotenv
 
-        load_dotenv()  # read .env file
 
-        self.user_id = os.getenv("USER_ID")
-        self.root_path = os.getenv("ROOT")
-
-        if self.user_id and self.root_path:
-            self.image_path = self.root_path + "/sourceimages"
+    def get_user_id(self): # Get user_id when you run Maya through Loader.
+        try:
+            self.user_id = os.environ["USER_ID"] # Forward "user_id" from loader to "publish", "upload", "asset loader".
+        except:
+            QMessageBox.about(self, "Warning", "Not a valid user")
 
     def get_user_name(self):
         # Find user_name with user_id
         user_datas = self.sg_api.get_datas_by_user_id(self.user_id)
-        self.user_name = user_datas["name"]
+        user_name = user_datas["name"]
+        self.user_name = user_name
 
     def get_shot_info_from_current_directory(self): # Extract project, seq_name, seq_num, task, version, shot_id.
 
@@ -735,7 +734,7 @@ class AssetLoader(QWidget):
 
     def import_shader(self, shader_ma_path, shader_json_path):
         print("Bring up the shader.ma file containing shader and shader.json containing shader assign information and attach shader to object.")
-        self.maya_api.import_shader(shader_ma_path, shader_json_path)
+        self.maya_api.assign_shader_to_asset(shader_ma_path, shader_json_path)
 
     def set_undistortion_size(self): # Setting "Image Size" for render settings
         undistortion_height, undistortion_width = self.sg_api.get_undistortion_size(self.shot_id)

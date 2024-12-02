@@ -32,6 +32,7 @@ class ShotPublish(QWidget):
 
         self.sg_api = ShotgunApi()
         self.maya_api = MayaApi()
+
         self.get_env_info()
         self.make_ui()
         self.sg_api.connect_sg()
@@ -46,6 +47,7 @@ class ShotPublish(QWidget):
         self.classify_task()
 
         self.ui.pushButton_shotpub.clicked.connect(self.get_root_nodes)
+        
     def get_env_info(self):
         from dotenv import load_dotenv
 
@@ -437,7 +439,6 @@ Lighting Team Cleanup List\n
             
             return current_version_folder, previous_version_folder
 
-
     def get_file_paths(self):
         """
         Returns the path of the current and previous versions based on the path of the currently open Maya file.
@@ -455,7 +456,6 @@ Lighting Team Cleanup List\n
         # Return current version (v002) and previous version path (v001).
         current_version_folder, previous_version_folder = self.get_version_folders(base_folder, file_name)
         return current_version_folder, previous_version_folder
-
 
     def copy_folders(self):
 
@@ -480,8 +480,6 @@ Lighting Team Cleanup List\n
                 if not os.path.exists(dest_path):
                     # Copy folders if they don't exist.
                     shutil.copytree(src_path, dest_path)
-
-
 
     def link_camera(self):
         project = self.get_project()
@@ -512,8 +510,6 @@ Lighting Team Cleanup List\n
                 os.system(f"ln -s {cam_full_path} {seq_cam_path}") # ln -s "original path" "symbolic path"
                 print(f"You have linked your {task} camera to rendercam!")
 
-
-
     def get_task_id(self):
         # Get seq_num_id
         seq_num = self.get_seq_number()
@@ -523,22 +519,27 @@ Lighting Team Cleanup List\n
         self.sg_api.get_step_id(step_name, seq_num_id)
 
 
+# Backend
     def sg_status_update(self):
-
         task_id = self.get_task_id()
+
         self.sg_api.update_status_to_pub(task_id)
         print(f"Update the status of {task_id} to pub in the Task entity.")
 
     def sg_abc_pub_directory_update(self):
+        """
+        Upload the path of the published abc file into the pub file directory field.
+        """
         task_id = self.get_task_id()
         camera_path = self.export_camera_alembic()
         # /home/rapa/pub/Moomins/seq/AFT/AFT_0010/lgt/pub/cache/v001/AFT_0010_lgt_cam.abc
 
         self.sg_api.update_camera_path(task_id, camera_path)
-        print("Upload the path of the published abc file into the pub file directory field.")
 
     def sg_pub_exr_directory_update(self):
-        print("Upload the path of the published exr file into the pub file directory field.")
+        """
+        Upload the path of the published exr file into the pub file directory field.
+        """
         task_id = self.get_task_id()
         exr_path  = self.version_folder()
 
@@ -567,7 +568,6 @@ Lighting Team Cleanup List\n
 
         # Upload each to the undistortion size field of the SG Shot entity.
         self.sg_api.update_undistortion_size(shot_id, undistortion_width, undistortion_height)
-
 
     def get_image_plane_coverage(self):
         """

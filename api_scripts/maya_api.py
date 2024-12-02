@@ -1,15 +1,16 @@
 import os
 import json
+
 try:
     from PySide6.QtWidgets import QMessageBox
     from PySide6.QtGui import *
 except:
     from PySide2.QtWidgets import QMessageBox
     from PySide2.QtGui import *
+
 import maya.cmds as cmds
 import maya.mel as mel
 from maya import OpenMayaUI as omui
-
 
 class MayaApi:
     def __init__(self):
@@ -28,7 +29,7 @@ class MayaApi:
     def assign_shader_to_asset(reference_node, shader_json_file, shader_ma_file):
         """
         Assign shader to assets.
-        셰이더는 ma파일과 셰이더 어싸인 정보가 담긴 json 파일을 이용합니다.
+        The shader uses the ma file and the json file that contains the shader-assigned information.
         """
         print (reference_node, shader_json_file, shader_ma_file)
         
@@ -38,26 +39,27 @@ class MayaApi:
         else:
             asset_name = node_name
 
-        # asset_name 으로 shader 파일 경로를 찾는 스크립트 필요
+        ########################### asset_name 으로 shader 파일 경로를 찾는 스크립트 필요
         # shader_json_file = f"/show/4th_academy/assets/char/{asset_name}/lookdev/wip/maya/data/shader.json"
         # shader_ma_file = f"/show/4th_academy/assets/char/{asset_name}/lookdev/wip/maya/data/shader.ma"
 
         if not os.path.exists(shader_json_file):
-            print ("publish된 셰이더 정보가 없습니다.")
+            print ("No published shader information.")
             return
 
         if not os.path.exists(shader_ma_file):
-            print ("publish된 셰이더 데이터 없습니다.")
+            print ("No published shader information.")
             return
 
+        # Set the Maya Namespace.
         name_space = os.path.basename(shader_ma_file).split(".")[0]
         cmds.file(shader_ma_file, i=True, namespace=name_space)
 
-        # json파일 로드.
+        # Load json file.
         with open(shader_json_file, "r") as f:
             shader_data = json.load(f)
 
-        # shader dictionary 정보대로 임포트한 셰이더에 오브젝트를 붙인다.
+        # Attach a shader to the object as described in the dictionary.
         for shader, objects in shader_data.items():
             name_space_shader = f"{name_space}:{shader}"
             for object in objects:
@@ -69,8 +71,8 @@ class MayaApi:
 
     def import_reference(asset_path):
         """
-        애셋의 경로를 입력받으면 레퍼런스로 임포트하는 메서드입니다.
-        마야 특징을 따라 네임 스페이스는 파일의 이름으로 생성합니다.
+        This is a method that imports the path of the asset as a reference when it is entered.
+        Following the Maya feature, the name space is created as the name of the file.
         """
         file_name = os.path.basename(asset_path)
         name_space = file_name.split(".")[0]
@@ -83,7 +85,7 @@ class MayaApi:
 
     def get_reference_assets():
         """
-        레퍼런스 노드들의 애셋 이름과 파일 경로를 딕셔너리로 리턴합니다.
+        Returns the asset name and file path of the reference nodes to the dictionary.
         """
         reference_dict = {}
         ref_assets = cmds.ls(type="reference")
@@ -106,43 +108,24 @@ class MayaApi:
 
     def update_reference_file_path(ref_node, new_path, pushButton_update):
         """
-        레퍼런스 노드와 새로운 경로를 주면 레퍼런스 노드의 파일 경로를 업데이트 합니다.
+        If you give a reference node and a new path, it updates the file path of the reference node.
         """
         if not os.path.exists(new_path):
-            print ("경로에 파일이 존재하지 않습니다. 레퍼런스 노드를 업데이트 할 수 없습니다.")
+            print ("The file does not exist in the path.\nThe reference node could not be updated.")
             return None
         cmds.file(new_path, loadReference=ref_node)
         pushButton_update.setEnabled(False)
         return ref_node
-
-    def assgin_shader():
-        shader_ma_file = "/show/4th_academy/assets/char/teapot/lookdev/wip/maya/data/shader.ma"
-        shader_file = "/show/4th_academy/assets/char/teapot/lookdev/wip/maya/data/shader.json"
-
-        # 마야 네임스페이스를 설정합니다.
-        name_space = os.path.basename(shader_ma_file).split(".")[0]
-        cmds.file(shader_ma_file, i=True, namespace=name_space)
-
-        # json파일 로드.
-        with open(shader_file, "r") as f:
-            shader_data = json.load(f)
-
-        # shader dictionary 정보대로 임포트한 셰이더에 오브젝트를 붙인다.
-        for shader, objects in shader_data.items():
-            name_space_shader = f"{name_space}:{shader}"
-            cmds.select(clear=True)
-            for object in objects:
-                cmds.select(object, add=True)
-            cmds.hyperShade(assign=name_space_shader)
-
-
 
     def set_render_resolution(undistortion_height, undistortion_width):
 
         cmds.setAttr("defaultResolution.width", int(undistortion_width))
         cmds.setAttr("defaultResolution.height", int(undistortion_height))
 
-    def get_frame_range(self, shot_id): # 샷그리드에서 shot_id 기준으로 Frame Range를 가져오기
+    def get_frame_range(self, shot_id):
+        """
+        Get Frame Range from shotgrid based on shot_id.
+        """
         filter = [["id", "is", shot_id]]
         field = ["sg_cut_in", "sg_cut_out"]
         frame_info = self.sg.find_one("Shot", filters=filter, fields=field)
@@ -152,38 +135,18 @@ class MayaApi:
         return start_frame, end_frame
 
     def set_frame_range(start_frame, end_frame):
-        # 타임 슬라이더의 시작 및 종료 프레임 설정
+        # Setting the start and end frames of the time slider.
         cmds.playbackOptions(min=start_frame, max=end_frame)
 
-        # 현재 프레임 범위도 동일하게 설정 (프레임 범위 안에서 현재 시작 및 종료 프레임 설정)
+        # Set the current frame range the same (set current start and end frames within the frame range).
         cmds.playbackOptions(ast=start_frame, aet=end_frame)
 
 
     def get_current_file_directory():
         current_file_path = cmds.file(q=True, sn=True)
-        print(f"현재 마야 파일 경로 : {current_file_path}")
+        print(f"Current maya file directory : {current_file_path}")
         # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001/AFT_0010_v001_w001.mb
         return current_file_path
-
-    def import_shader(shader_ma_path, shader_json_path):
-
-        # maya name space 설정
-        name_space = os.path.basename(shader_ma_path).split(".")[0]
-        cmds.file(shader_ma_path, i=True, namespace=name_space)
-
-        # json 파일 로드
-        with open(shader_json_path, "r") as f:
-            shader_dict = json.load(f)
-
-        # shadere dictionary 정보대로 shader에 오브젝트 붙이기
-        for shader, objects in shader_dict.items():
-            name_space_shader = f"{name_space}:{shader}"
-            cmds.select(clear=True)
-            for oject in objects:
-                cmds.select(object, add=True)
-            cmds.hyperShade(assign=name_space_shader)
-
-
 
 
 
@@ -191,7 +154,6 @@ class MayaApi:
     def get_current_maya_file_path():
         file_path = cmds.file(query=True, sceneName=True)
         return file_path
-
 
     def get_root_nodes():
         assemblies = cmds.ls(assemblies=True)
@@ -363,3 +325,101 @@ class MayaApi:
 
         except Exception as e:
             print(f"Error getting image plane property value: {e}")
+
+
+# Asset & Shot Upload
+
+
+    def get_maya_frame_range():
+        start_frame = cmds.playbackOptions(query=True, min=True)
+        end_frame = cmds.playbackOptions(query=True, max=True)
+        start_frame = int(float(start_frame))
+        end_frame = int(float(end_frame))
+        frame_range = f"{start_frame}-{end_frame}"
+
+        return frame_range
+
+    def get_camera_transform():
+
+        selected_objects = cmds.ls(selection=True)
+        if not selected_objects:
+            self.raise_message_box("NoneSelectObject")
+            return
+
+        cmds.playbackOptions(min=1, max=100)                                  # Set from 1 to 200 frames.
+        camera_transform,camera_shape = cmds.camera(name="turntable_camera#") # Create a camera.
+        cmds.setAttr(f"{camera_shape}.orthographic", 0)                       # Change camera view to perspective.
+        camera_position = (10, 10, 15)
+        cmds.xform(camera_transform, ws=True, translation=camera_position)
+        turntable_camera_grp = cmds.group(empty = True, name = "turntable_camera_grp") # Group the camera.
+        cmds.parent(camera_transform,turntable_camera_grp)
+        cmds.xform(turntable_camera_grp, ws=True, translation=(0, 0, 0))               # Make the camera world axis (0,0,0)
+        cmds.lookThru(camera_transform)
+
+        cmds.setAttr(f"{camera_transform}.rotateX", -30)                                                                # 내가 직접 해보고 그나마 잘보이는수치
+        cmds.setAttr(f"{camera_transform}.rotateY", 35)
+    
+        cmds.setKeyframe(turntable_camera_grp,attribute="rotateY",time=1,value=0)                                       # 1프레임 rotateY key == 0 
+        cmds.setKeyframe(turntable_camera_grp,attribute="rotateY",time=100,value=360)                                   # 100프레임 rotateY key == 100
+        cmds.keyTangent(turntable_camera_grp,attribute="rotateY",inTangentType="linear",outTangentType="linear")        # 애니메이션 linear
+
+        return camera_transform
+
+    def render_shot_playblast(self, start_frame, end_frame,image_file_path):
+
+        selected_objects = cmds.ls(selection=True) # When no object is selected.
+        if not selected_objects:
+            self.msg_box("NoneSelectCamera")
+            return
+
+        cmds.playbackOptions(min=start_frame, max=end_frame) # Get current maya's frames 
+        selected_objects = cmds.ls(selection=True, type='camera')
+
+        if selected_objects: # Returns the camera of the selected item.
+            self.camera = selected_objects[0]
+        file_format = "jpg"
+
+        cmds.playblast(
+        startTime=start_frame,
+        endTime=end_frame,
+        format="image",           # Set the format as image.
+        filename=image_file_path, # Full file path containing the image name.
+        widthHeight=(1920, 1080), # Image resolution settings
+        sequenceTime=False,
+        clearCache=True,
+        viewer=False,             # Do not play immediately after playblast.
+        showOrnaments=False,      # Hide UI elements
+        fp=4,                     # Frame Paddins ex) _0001
+        percent=100,              # Resolution percentage
+        compression=file_format,  # Codec settings
+        quality=100,              # Quality settings
+        )
+
+    def render_asset_playblast(start_frame, end_frame, image_file_path):
+
+        if not camera_transform:
+            return
+
+        model_panel = cmds.getPanel(withFocus=True)                              # Get the viewport panel you're looking at.
+        if not model_panel or cmds.getPanel(typeOf=model_panel) != 'modelPanel': # Verify that it is a model Panel.
+            return
+        cmds.modelPanel(model_panel, edit=True, camera=camera_transform)
+        file_format = "jpg" 
+
+        cmds.playblast(
+        startTime=start_frame,
+        endTime=end_frame,
+        format="image",
+        filename=image_file_path,
+        widthHeight=(1920, 1080),
+        sequenceTime=False,
+        clearCache=True,
+        viewer=False
+        showOrnaments=False,
+        fp=4,
+        percent=100,
+        compression=file_format,
+        quality=100,
+        )
+
+
