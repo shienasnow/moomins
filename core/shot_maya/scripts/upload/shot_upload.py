@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 import datetime
+from pprint import pprint
+
 try:
     from PySide6.QtWidgets import QWidget,QApplication,QLabel
     from PySide6.QtWidgets import QGridLayout,QTableWidget,QMessageBox
@@ -20,9 +22,8 @@ except:
     from PySide2.QtCore import QFile,Qt,QTimer
     from PySide2.QtGui import QPixmap
     from shiboken2 import wrapInstance
-from pprint import pprint
-from capture import capturecode
 
+from moomins.api_scripts import capturecode
 from moomins.api_scripts.shotgun_api import ShotgunApi
 from moomins.api_scripts.maya_api import MayaApi
 
@@ -35,26 +36,37 @@ class ShotUpload(QWidget):
 
     def __init__(self):
         super().__init__()
+
         self.sg_api = ShotgunApi()
         self.maya_api = MayaApi()
-        self.get_env_info()
+
         self.connect_sg()
         self.make_ui()
         self.set_text_label()
         self.event_func()
 
-    def input_path(self):
+    def get_env_info(self):
+        from dotenv import load_dotenv
 
+        load_dotenv()  # read .env file
 
-        ex_path = cmds.file(q=True, sn=True)
-        # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001/AFT_0010_v001_w001.mb
+        self.user_id = os.getenv("USER_ID")
+        self.root_path = os.getenv("ROOT")
 
-        open_file_name = os.path.basename(ex_path)  # AFT_0010_v001_w001.mb
-        open_file_path = os.path.dirname(ex_path)   # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001
+        if self.user_id and self.root_path:
+            self.image_path = self.root_path + "/sourceimages"
+
+    def get_current_file_path(self):
+
+        current_file_path = self.maya_api.get_current_maya_file_path()
+
+        open_file_name = os.path.basename(current_file_path)  # AFT_0010_v001_w001.mb
+        open_file_path = os.path.dirname(current_file_path)   # /home/rapa/wip/Moomins/seq/AFT/AFT_0010/ly/wip/scene/v001
+
         return open_file_name,open_file_path
 
     def set_text_label(self):
-        file_name,file_path = self.input_path()
+        file_name,file_path = self.get_current_file_path()
         
         only_file_name,_ext = os.path.splitext(file_name)               # AFT_0010_v001_w001,.mb
         split_file_name = only_file_name.split("_")
@@ -68,22 +80,13 @@ class ShotUpload(QWidget):
 
         artist_name = self.get_artist_name()
 
-        # Moomin_path = "/home/rapa/test_image/Moomin.jpg"
-        # Moomin_path = self.file_path + "/sourceimages/Moomin.jpg"
-        # pixmap = QPixmap(Moomin_path)
-        # scaled_pixmap = pixmap.scaled(80, 80)
-        # self.ui.label_Moomin.setPixmap(scaled_pixmap)
-
         self.ui.label_project.setText(project)
         self.ui.label_seq_num.setText(seq_num)
         self.ui.label_version.setText(version)
         self.ui.label_ext.setText(ext)
 
-        start_frame = cmds.playbackOptions(query=True, min=True)
-        end_frame = cmds.playbackOptions(query=True, max=True)
-        start_frame = int(float(start_frame))
-        end_frame = int(float(end_frame))
-        frame_range = f"{start_frame}-{end_frame}"
+        frame_range =  self.maya_api.get_maya_frame_range()
+
         file_data_list = [project, only_file_name, task, artist_name, frame_range, seq, seq_num]
         
         self.project = project
@@ -113,73 +116,47 @@ class ShotUpload(QWidget):
         self.setMinimumSize(400, 550)
 
     def event_func(self):
-        self.ui.pushButton_render.clicked.connect(self.push_render_button)
+        self.ui.pushButton_render.clicked.connect(self.playblast_render)
         self.ui.pushButton_capture.clicked.connect(self.push_capture_image_button)
         self.table.cellDoubleClicked.connect(self.double_click_table_widget)
-        
+
+        # Backend
         self.ui.pushButton_upload.clicked.connect(self.sg_status_update)
         self.ui.pushButton_upload.clicked.connect(self.sg_thumbnail_upload)
         self.ui.pushButton_upload.clicked.connect(self.sg_mov_upload)
 
-    def get_env_info(self):
-        from dotenv import load_dotenv
-
-        load_dotenv()  # read .env file
-
-        self.user_id = os.getenv("USER_ID")
-        self.root_path = os.getenv("ROOT")
-
-        if self.user_id and self.root_path:
-            self.image_path = self.root_path + "/sourceimages"
 
 
-    def push_render_button(self):   # 카메라가 생성되고 오브젝트 그룹이 잡히면서 키만 들어가야한다.
+    def playblast_render(self):
+        """
+        An object group is selected, a camera is created, and a key is given.
+        """
         file_data_list = self.set_text_label()
         project,only_file_name,task,artist_name,frame_range,seq,seq_num = file_data_list
+
         render_file_path = f"/home/rapa/wip/{project}/seq/{seq}/{seq_num}/{task}/wip/images/{self.version}"
         image_file_path =  f"{render_file_path}/{only_file_name}"
+
         start_frame_str= frame_range.split("-")[0]
         end_frame_str = frame_range.split("-")[1]
         start_frame = int(float(start_frame_str))
         end_frame = int(float(end_frame_str))
+
         if start_frame <=1000:
             start_frame += 1000
         if end_frame <=1000:
             start_frame += 1000
+
         self.mov_full_path = f"{render_file_path}/{only_file_name}.mov"
 
-        render_icon_path = "/home/rapa/git/pipeline/sourceimages/mov.png"
-        selected_objects = cmds.ls(selection=True)                                                                  # 선택한 오브젝트가 없으면 돌아가라.
-        if not selected_objects:
-            self.msg_box("NoneSelectCamera")
-            return
+        # Execute Playblast Render for Shot.
+        self.maya_api.render_shot_playblast(start_frame, end_frame, image_file_path)
 
-        cmds.playbackOptions(min=start_frame, max=end_frame)                                                  # 현재 마야의 프레임 가져오기.    
-        selected_objects = cmds.ls(selection=True, type='camera')
+        render_icon_path = self.image_path + "mov.png"
+        self.add_row_to_table("Rendering", render_icon_path)
 
-        if selected_objects:                                                # 선택된 아이템 중 카메라를 반환합니다.
-            self.camera = selected_objects[0]
-        file_format = "jpg"
-
-        cmds.playblast(
-        startTime=start_frame,              # 시작프레임
-        endTime=end_frame,                  # 끝프레임
-        format="image",                     # 포맷을 image로 설정
-        filename=image_file_path,           # 이미지 이름이 포함된 총 파일 경로.
-        widthHeight=(1920, 1080),           # 이미지 해상도 설정.        # 동영상이 왜 깨지는지 모르겠음
-        sequenceTime=False,
-        clearCache=True,
-        viewer=False,                       # 플레이블라스트 후 바로 재생하지 않음
-        showOrnaments=False,                # UI 요소 숨김
-        fp=4,                               # 프레임 패딩 ex) _0001
-        percent=100,                        # 해상도 백분율
-        compression=file_format,            # 코덱 설정
-        quality=100,                        # 품질 설정
-        )
-
-        self.add_row_to_table("Rendering",render_icon_path)
         print(os.listdir(render_file_path))
-        self.msg_box("ImageRenderComplete")
+        self.msg_box("*"*10, "Render Complete!")
 
         self.make_mov_use_ffmpeg()
 
@@ -247,7 +224,7 @@ class ShotUpload(QWidget):
         process.wait()
 
 
-    # @Slot
+
     def call_back_capture(self,value):
         
         if value == True:
@@ -396,89 +373,33 @@ class ShotUpload(QWidget):
         grid_layout.addWidget(label_artist_name, 1, 1)
         grid_layout.addWidget(label_date, 1, 2, 1, 3)
 
-    def connect_sg(self):
-        URL = "https://4thacademy.shotgrid.autodesk.com"
-        SCRIPT_NAME = "moomins_key"
-        API_KEY = "gbug$apfmqxuorfqaoa3tbeQn"
-
-        self.sg = self.sg_api.Shotgun(URL,
-                                SCRIPT_NAME,
-                                API_KEY)
-
-    def get_artist_name(self):
-        filter = [["id", "is", self.user_id]]
-        field = ["name"]
-        artist_info = self.sg.find_one("HumanUser", filters=filter, fields=field)
-        # print(artist_info) # {'type': 'HumanUser', 'id': 105, 'name': 'Dami Kim'}
-        artist_name = artist_info["name"]
-        # print(artist_name)
-
-        return artist_name
 
 
-# Backend : upload 버튼 누르면 샷그리드에 썸네일과 mov 올리고, status업데이트
-    def sg_status_update(self): # seq_num_id, task id 찾는 과정 포함
-        print("sg_status_update 함수 실행")
+# Backend (Run by pressing the upload button)
+    def sg_status_update(self):
+        """
+        Find the status field that meets the two conditions by finding the seq id, task id,
+        and change the status to 'pub'.
+        """
+        self.sg_api.sg_shot_status_update_pub(self.selected_seq_num, self.task)
 
-        # seq id 구하기
-        seq_filter = [["code", "is", self.selected_seq_num]] # 현재 작업 중인 시퀀스 넘버 ex.OPN_0010
-        seq_field = ["id"]
-        seq_info = self.sg.find_one("Shot", filters=seq_filter, fields=seq_field) # {'type': 'Asset', 'id': 1789}
-        self.selected_seq_num_id = seq_info["id"]
-
-        # task id 구하기 (ly, ani, lgt)
-        step = self.sg.find_one("Step",[["code", "is", self.task]], ["id"])
-        step_id = step["id"] # 277 (ly의 step)
-
-        # seq_id, task_id 조건에 맞는 status 필드 찾기
-        filter =[
-            ["entity", "is", {"type": "Shot", "id": self.selected_seq_num_id}],
-            ["step", "is", {"type": "Step", "id": step_id}]
-                 ] 
-        field = ["id"]
-        task_info = self.sg.find_one("Task", filters=filter, fields=field)
-        print(task_info)
-        self.task_id = task_info["id"]
-
-        self.sg.update("Task", self.task_id, {"sg_status_list": "pub"})
-        print(f"Asset 엔티티에서 {self.task_id}의 status를 pub으로 업데이트합니다.") # publish에서는 fin으로 바꾸기
-
-    def sg_thumbnail_upload(self): # task id에 맞는 이미지 필드에 썸네일 jpg 업로드
-        print("sg에 썸네일 이미지와 컨펌용 mov를 업로드합니다.")
-        self.sg.upload("Task", self.task_id, self.capture_path, "image")
+    def sg_thumbnail_upload(self):
+        """
+        Upload thumbnail image in the image field that fits the task id
+        """
+        png_path = self.capture_path
+        self.sg_api.sg_upload_image(png_path)
 
     def sg_mov_upload(self):
-        print("sg에 컨펌용 mov를 업로드합니다.")
-
-        # 프로젝트 id 찾기
-        filter = [["name", "is", self.project]]
-        field = ["id"]
-        project_info = self.sg.find_one("Project", filters=filter, fields=field)
-        project_id = project_info["id"]
+        """
+        Upload the confirmation mov to the shot grid.
+        """
+        project_id = self.sg_api.get_project_id_by_name(self.project)
 
         comment = self.ui.plainTextEdit_comment.toPlainText()
-        print(f"올릴 코멘트 내용 확인 :{comment}")
+        print(f"Check the comments to be posted :{comment}")
 
-        # print(self.seq_name) # AFT
-        # print(self.selected_seq_num) # AFT_0010
-        # print(self.selected_seq_num_id) # 1353
-        # print(self.task_id) # 6328
-
-        # Version Entity
-        version_data = {
-            "project":{"type" : "Project", "id" : project_id},
-            "code" : self.version,
-            "description" : comment,
-            "entity" : {"type": "Shot", "id": self.selected_seq_num_id}, # Entity에 연결 (시퀀스 이름)#################################
-            "sg_task" : {"type": "Task", "id": self.task_id},  # sg_task (시퀀스 넘버)
-            "sg_status_list" : "pub"
-        }
-        new_version = self.sg.create("Version", version_data) # Add Version 생성
-        version_id = new_version["id"]
-
-        self.sg.update("Version", version_id, {"user" : {"type" : "HumanUser", "id" : self.user_id}}) # artist 업로드
-        self.sg.upload("Version", version_id, self.mov_full_path, "sg_uploaded_movie") # mov 업로드
-
+        self.sg_api.sg_shot_upload_mov(project_id, self.version, comment, self.user_id, self.mov_full_path)
 
 
 if __name__ == "__main__":
