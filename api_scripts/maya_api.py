@@ -1,5 +1,8 @@
 import os
 import json
+import maya.cmds as cmds
+import maya.mel as mel
+from maya import OpenMayaUI as omui
 
 try:
     from PySide6.QtWidgets import QMessageBox
@@ -8,9 +11,6 @@ except:
     from PySide2.QtWidgets import QMessageBox
     from PySide2.QtGui import *
 
-import maya.cmds as cmds
-import maya.mel as mel
-from maya import OpenMayaUI as omui
 
 class MayaApi:
     def __init__(self):
@@ -339,12 +339,11 @@ class MayaApi:
 
         return frame_range
 
-    def get_camera_transform():
 
-        selected_objects = cmds.ls(selection=True)
-        if not selected_objects:
-            self.raise_message_box("NoneSelectObject")
-            return
+    def get_selected_object():
+        return cmds.ls(selection=True)
+
+    def get_camera_transform(self):
 
         cmds.playbackOptions(min=1, max=100)                                  # Set from 1 to 200 frames.
         camera_transform,camera_shape = cmds.camera(name="turntable_camera#") # Create a camera.
@@ -356,12 +355,12 @@ class MayaApi:
         cmds.xform(turntable_camera_grp, ws=True, translation=(0, 0, 0))               # Make the camera world axis (0,0,0)
         cmds.lookThru(camera_transform)
 
-        cmds.setAttr(f"{camera_transform}.rotateX", -30)                                                                # 내가 직접 해보고 그나마 잘보이는수치
+        cmds.setAttr(f"{camera_transform}.rotateX", -30)
         cmds.setAttr(f"{camera_transform}.rotateY", 35)
     
-        cmds.setKeyframe(turntable_camera_grp,attribute="rotateY",time=1,value=0)                                       # 1프레임 rotateY key == 0 
-        cmds.setKeyframe(turntable_camera_grp,attribute="rotateY",time=100,value=360)                                   # 100프레임 rotateY key == 100
-        cmds.keyTangent(turntable_camera_grp,attribute="rotateY",inTangentType="linear",outTangentType="linear")        # 애니메이션 linear
+        cmds.setKeyframe(turntable_camera_grp,attribute="rotateY",time=1,value=0)     # 1 frame, rotateY key == 0 
+        cmds.setKeyframe(turntable_camera_grp,attribute="rotateY",time=100,value=360) # 100 frame rotateY key == 100
+        cmds.keyTangent(turntable_camera_grp,attribute="rotateY",inTangentType="linear",outTangentType="linear")
 
         return camera_transform
 
@@ -397,10 +396,11 @@ class MayaApi:
 
     def render_asset_playblast(start_frame, end_frame, image_file_path):
 
+        camera_transform = self.get_camera_transform()
         if not camera_transform:
             return
 
-        model_panel = cmds.getPanel(withFocus=True)                              # Get the viewport panel you're looking at.
+        model_panel = cmds.getPanel(withFocus=True) # Get the viewport panel you're looking at.
         if not model_panel or cmds.getPanel(typeOf=model_panel) != 'modelPanel': # Verify that it is a model Panel.
             return
         cmds.modelPanel(model_panel, edit=True, camera=camera_transform)
