@@ -15,7 +15,6 @@
 
 ### Project Overview
 **Project Name**: Moomins API  
-**Development Period**: 2024.08.13 - 2024.09.05  
 **Team Name**: Moomins  
 **Operating System**: Linux  
 **Programming Language**: Python3  
@@ -31,10 +30,13 @@
 - Adobe Express
 - ideogram.ai
 
+## Development Period
+- **Start Date**: 2024-08-13  
+- **End Date**: 2024-09-05
+- **Trimming**: 2024-11 (Park Ju Seok, Seol Hyo Eun)
+
 ### Concept
 In the VFX production environment, artists often face decreased productivity and increased fatigue due to the complexities of setting up workflows and managing files. **Moomins API** was developed to address these issues by providing an automation tool that integrates with Shotgun, significantly reducing project setup time and improving convenience. The goal is to create a more comfortable work environment for artists, enabling them to work more effectively and efficiently.
-
-### Goals
 - **Project Setup Automation**: Reduce the time required for artists to set up projects.
 - **Integration with Shotgun**: Enhance the efficiency of project management.
 - **Maximize Workflow Efficiency**: Provide an environment where artists can focus on creative work.
@@ -44,20 +46,6 @@ In the VFX production environment, artists often face decreased productivity and
 - **Real-Time Data Integration**: Reflect progress accurately with real-time updates from the Shotgun database.
 - **Version Control Integration**: Simplify version management by integrating it into the loader through right-click options.
 - **Automatic File and Folder Creation**: Automate the creation of files and folders upon program execution, including updates to the Shotgun database for efficient workflow management.
-
-## Development Period
-- **Start Date**: 2024-08-13  
-- **End Date**: 2024-09-05
-- **Trimming**: 2024-11
-
-## Team Members
-| Role   | Name        | GitHub Profile                                
-|--------|-------------|---------------------------------------------
-| Team Leader   | Seo Hyo Eun      | [@shienasnow](https://github.com/shienasnow)
-| Team Member   | Kim Dami      | 
-| Team Member   | Park Han Byeol      | 
-| Team Member   | Park Ju Seok      | [@ParkHashhh](https://github.com/ParkHashhh)
-| Team Member   | Yeom Jung Hyun      | [@yyyjh1213](https://github.com/yyyjh1213)
 
 ## Project Structure
 ```plaintext
@@ -75,6 +63,15 @@ Moomins-API/
 ├── sourceimages                # Collection of source images (PNG)
 └── create_desktop_file.py      # Execution file
 ```
+
+## Team Members
+| Role   | Name        | GitHub Profile                                
+|--------|-------------|---------------------------------------------
+| Team Leader   | Seol Hyo Eun      | [@shienasnow](https://github.com/shienasnow)
+| Team Member   | Kim Dami      | 
+| Team Member   | Park Han Byeol      | 
+| Team Member   | Park Ju Seok      | [@ParkHashhh](https://github.com/ParkHashhh)
+| Team Member   | Yeom Jung Hyun      | [@yyyjh1213](https://github.com/yyyjh1213)
 
 ### Required Packages
 The list of external packages required to run this API is described in requirements.txt.
