@@ -433,7 +433,7 @@ class ShotgunApi:
         seq_field = ["id"]
         seq_info = self.sg.find_one("Shot", filters=seq_filter, fields=seq_field) # {'type': 'Asset', 'id': 1789}
         shot_id = seq_info["id"]
-        print(f"shot_id 찾기 : {shot_id}")
+        print(f"shot_id : {shot_id}")
 
 
         # Get all the status of tasks corresponding to shot id.
