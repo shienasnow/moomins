@@ -8,9 +8,9 @@
 | Pipeline   | Step        | Video Links                                
 |--------|-------------|---------------------------------------------
 | Asset   | Lookdev Dept      | [@Video](https://youtu.be/0P0iHkYt0OI?si=HCn1jY91y8nt1T0w)
-| Shot    | Kim Dami      | [@Video](https://youtu.be/_bSvw0jTWvc?si=bVcHb_R883TwFA4b)
-| Shot    | Park Han Byeol      | [@Video](https://youtu.be/WVaZMLCwjKs?si=Hqx80I_eaoCdn7eo)
-| Shot    | Park Ju Seok      | [@Video](https://youtu.be/hPuDBoU4WeQ?si=SOlPmenjOTkBYTxJ)
+| Shot    | Layout Dept      | [@Video](https://youtu.be/_bSvw0jTWvc?si=bVcHb_R883TwFA4b)
+| Shot    | Lighting Dept      | [@Video](https://youtu.be/WVaZMLCwjKs?si=Hqx80I_eaoCdn7eo)
+| Shot    | Composition Dept      | [@Video](https://youtu.be/hPuDBoU4WeQ?si=SOlPmenjOTkBYTxJ)
 
 
 ### Project Overview
