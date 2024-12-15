@@ -359,7 +359,7 @@ class ShotgunApi:
         # Get task id (mm, ly, ani, fx, lgt, prc, cmp)
         step = self.sg.find_one("Step",[["code", "is", task]], ["id"])
         step_id = step["id"]
-        print(f"step_id 찾기 : {step_id}")
+        print(f"step_id : {step_id}")
 
         filter =[
             ["entity", "is", {"type": "Shot", "id": shot_id}],
@@ -408,7 +408,7 @@ class ShotgunApi:
 
         # Change the asset status to fin only if it is all 'fin'.
         if all_fin == True:
-            self.sg.update("Asset", asset_id, {"sg_status_list": "wip"})
+            self.sg.update("Asset", asset_id, {"sg_status_list": "fin"})
 
 
         """
@@ -463,7 +463,7 @@ class ShotgunApi:
 
         # Change the asset status to fin only if it is all 'fin'.
         if all_fin == True:
-            self.sg.update("Asset", shot_id, {"sg_status_list": "wip"}) 
+            self.sg.update("Asset", shot_id, {"sg_status_list": "fin"}) 
 
         """
         If any of the tasks corresponding to shot_id is 're'
