@@ -1,5 +1,4 @@
 import sys
-sys.path.append("/usr/local/lib/python3.6/site-packages")
 from shotgun_api3 import shotgun
 import os
 from pprint import pprint
